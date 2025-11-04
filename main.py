@@ -15,7 +15,7 @@ plt.rcParams.update({'font.size': 18})
 from utils import *
 from prior import *
 from llikelihood import *
-from dynesty import *
+from fit import *
 
 if __name__ == "__main__":
     ndim  = 14
