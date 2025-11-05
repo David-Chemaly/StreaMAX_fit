@@ -19,8 +19,8 @@ from fit import *
 
 if __name__ == "__main__":
     ndim  = 14
-    n_particles = 10000
-    n_min = 100
+    n_particles = 50000
+    n_min = 500
     nlive = 2000
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
