@@ -19,8 +19,8 @@ from fit import *
 
 if __name__ == "__main__":
     ndim  = 14
-    n_particles = 50000
-    n_min = 500
+    n_particles = 10000
+    n_min = 100
     nlive = 2000
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
@@ -67,7 +67,7 @@ if __name__ == "__main__":
             # Plot and Save flattening
             q_samps = get_q(dict_results['samps'][:, 2], dict_results['samps'][:, 3], dict_results['samps'][:, 4])
             plt.figure(figsize=(8, 6))
-            plt.hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 2.0))
+            plt.hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
             plt.axvline(np.median(q_samps), color='blue', linestyle='--', lw=2)
             plt.axvline(np.percentile(q_samps, 16), color='blue', linestyle=':', lw=2)
             plt.axvline(np.percentile(q_samps, 84), color='blue', linestyle=':', lw=2)
@@ -108,5 +108,3 @@ if __name__ == "__main__":
             plt.axis('off')
             plt.savefig(f'{new_PATH_DATA}/image_best_fit.pdf')
             plt.close()
-
-        break
