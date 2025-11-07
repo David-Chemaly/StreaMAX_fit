@@ -26,7 +26,7 @@ def prior_transform(p):
     vz1 = jax.scipy.special.ndtri(vz0) * 250
 
     time1 = 1 + 3*time
-    sig1  = 10 * sig
+    sig1  = 25 * sig
 
     
     return jnp.array([
