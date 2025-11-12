@@ -20,7 +20,7 @@ from fit import *
 if __name__ == "__main__":
     ndim  = 14
     n_particles = 25000
-    n_min = jnp.inf
+    n_min = 1.
     nlive = 2500
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
