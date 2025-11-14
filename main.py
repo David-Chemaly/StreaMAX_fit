@@ -87,9 +87,14 @@ if __name__ == "__main__":
             r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
             x_bin = r_bin * np.cos(dict_data['theta'] + dict_data['delta_theta'])
             y_bin = r_bin * np.sin(dict_data['theta'] + dict_data['delta_theta'])
-            theta_stream = np.arctan2(xv_stream[:, 1], xv_stream[:, 0]) + dict_data['delta_theta']
-            x_stream = r_stream * np.cos(theta_stream)
-            y_stream = r_stream * np.sin(theta_stream)
+            
+            # rotate Cartesian positions by +delta_theta
+            x0 = xv_stream[:, 0]
+            y0 = xv_stream[:, 1]
+            dt = dict_data['delta_theta']
+            c, s = np.cos(dt), np.sin(dt)
+            x_stream = x0 * c - y0 * s
+            y_stream = x0 * s + y0 * c
 
             sga = Table.read(f'{PATH_DATA}/SGA-2020.fits', hdu=1)
             residual, mask, z_redshift, pixel_to_kpc, PA = get_residuals_and_mask(PATH_DATA, sga, name)
