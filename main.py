@@ -19,9 +19,9 @@ from fit import *
 
 if __name__ == "__main__":
     ndim  = 14
-    n_particles = 25000
     n_min = 1
-    nlive = 2500
+    nlive = 2000
+    n_particles_per_point = 1000
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
@@ -29,29 +29,28 @@ if __name__ == "__main__":
 
     index = -1
     for name in tqdm(names, leave=True):
+        with open(f"{PATH_DATA}/{name}/dict_track.pkl", "rb") as f:
+            dict_data = pickle.load(f)
+        
+        # This sets the progenitor in the middle of the stream
+        dict_data['delta_theta'] = np.median(dict_data['theta'])
+        dict_data['theta'] -= dict_data['delta_theta']
+        dict_data['bin_width'] = np.diff(dict_data['theta']).min()
+
+        n_particles = n_particles_per_point * len(dict_data['theta'])
+
         index += 1
         new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_Nparticles{n_particles}_Nmin{n_min}_nlive{nlive}'
-        if os.path.exists(new_PATH_DATA):         
+        if not os.path.exists(new_PATH_DATA):         
             os.makedirs(new_PATH_DATA, exist_ok=True)
             
             M_stellar = STRRINGS_catalogue.iloc[index]['M_stream']/STRRINGS_catalogue.iloc[index]['M_stream/M_host']
             M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
 
-            with open(f"{PATH_DATA}/{name}/dict_track.pkl", "rb") as f:
-                dict_data = pickle.load(f)
-            
-            # This sets the progenitor in the middle of the stream
-            dict_data['delta_theta'] = np.median(dict_data['theta'])
-            dict_data['theta'] -= dict_data['delta_theta']
-            dict_data['bin_width'] = np.diff(dict_data['theta']).min()
-
-            # print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
-            # dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, nlive=nlive)
-            # with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
-            #     pickle.dump(dict_results, f)
-
-            with open(f'{new_PATH_DATA}/dict_results.pkl', 'rb') as f:
-                dict_results = pickle.load(f)
+            print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
+            dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, nlive=nlive)
+            with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
+                pickle.dump(dict_results, f)
 
             # Plot and Save corner plot
             labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
@@ -87,7 +86,7 @@ if __name__ == "__main__":
             r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
             x_bin = r_bin * np.cos(dict_data['theta'] + dict_data['delta_theta'])
             y_bin = r_bin * np.sin(dict_data['theta'] + dict_data['delta_theta'])
-            
+
             # rotate Cartesian positions by +delta_theta
             x0 = xv_stream[:, 0]
             y0 = xv_stream[:, 1]
