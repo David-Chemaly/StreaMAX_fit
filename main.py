@@ -85,9 +85,11 @@ if __name__ == "__main__":
             best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
             theta_stream, r_stream, xv_stream = params_to_stream(best_params, n_particles)
             r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
-            x_bin = r_bin * np.cos(dict_data['theta'] - dict_data['delta_theta'])
-            y_bin = r_bin * np.sin(dict_data['theta'] - dict_data['delta_theta'])
-            theta_stream = np.arctan2(xv_stream[:, 1], xv_stream[:, 0]) - dict_data['delta_theta']
+            x_bin = r_bin * np.cos(dict_data['theta'] + dict_data['delta_theta'])
+            y_bin = r_bin * np.sin(dict_data['theta'] + dict_data['delta_theta'])
+            theta_stream = np.arctan2(xv_stream[:, 1], xv_stream[:, 0]) + dict_data['delta_theta']
+            x_stream = r_stream * np.cos(theta_stream)
+            y_stream = r_stream * np.sin(theta_stream)
 
             sga = Table.read(f'{PATH_DATA}/SGA-2020.fits', hdu=1)
             residual, mask, z_redshift, pixel_to_kpc, PA = get_residuals_and_mask(PATH_DATA, sga, name)
@@ -99,7 +101,7 @@ if __name__ == "__main__":
             plt.axis('off')
             plt.subplot(1, 2, 2)
             plt.imshow(residual, origin='lower', cmap='gray')
-            plt.scatter(xv_stream[:, 0] / pixel_to_kpc + center_x, xv_stream[:, 1] / pixel_to_kpc + center_y, c='blue', s=1, label='Best fit')
+            plt.scatter(x_stream / pixel_to_kpc + center_x, y_stream / pixel_to_kpc + center_y, c='blue', s=1, label='Best fit')
             plt.scatter(x_bin / pixel_to_kpc + center_x, y_bin / pixel_to_kpc + center_y, c='lime')
             plt.scatter(dict_data['x']/pixel_to_kpc + center_x, dict_data['y']/pixel_to_kpc + center_y, color='red', s=10, label='Data')
             plt.xlim(0, residual.shape[1])
