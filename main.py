@@ -31,7 +31,7 @@ if __name__ == "__main__":
     for name in tqdm(names, leave=True):
         index += 1
         new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_Nparticles{n_particles}_Nmin{n_min}_nlive{nlive}'
-        if not os.path.exists(new_PATH_DATA):         
+        if os.path.exists(new_PATH_DATA):         
             os.makedirs(new_PATH_DATA, exist_ok=True)
             
             M_stellar = STRRINGS_catalogue.iloc[index]['M_stream']/STRRINGS_catalogue.iloc[index]['M_stream/M_host']
@@ -45,10 +45,13 @@ if __name__ == "__main__":
             dict_data['theta'] -= dict_data['delta_theta']
             dict_data['bin_width'] = np.diff(dict_data['theta']).min()
 
-            print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
-            dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, nlive=nlive)
-            with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
-                pickle.dump(dict_results, f)
+            # print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
+            # dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, nlive=nlive)
+            # with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
+            #     pickle.dump(dict_results, f)
+
+            with open(f'{new_PATH_DATA}/dict_results.pkl', 'rb') as f:
+                dict_results = pickle.load(f)
 
             # Plot and Save corner plot
             labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
@@ -82,9 +85,9 @@ if __name__ == "__main__":
             best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
             theta_stream, r_stream, xv_stream = params_to_stream(best_params, n_particles)
             r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
-            x_bin = r_bin * np.cos(dict_data['theta'] + dict_data['delta_theta'])
-            y_bin = r_bin * np.sin(dict_data['theta'] + dict_data['delta_theta'])
-            theta_stream = np.arctan2(xv_stream[:, 1], xv_stream[:, 0]) + dict_data['delta_theta']
+            x_bin = r_bin * np.cos(dict_data['theta'] - dict_data['delta_theta'])
+            y_bin = r_bin * np.sin(dict_data['theta'] - dict_data['delta_theta'])
+            theta_stream = np.arctan2(xv_stream[:, 1], xv_stream[:, 0]) - dict_data['delta_theta']
 
             sga = Table.read(f'{PATH_DATA}/SGA-2020.fits', hdu=1)
             residual, mask, z_redshift, pixel_to_kpc, PA = get_residuals_and_mask(PATH_DATA, sga, name)
