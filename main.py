@@ -20,7 +20,7 @@ from fit import *
 if __name__ == "__main__":
     ndim  = 14
     n_min = 1
-    nlive = 2500
+    nlive = 2000
     n_particles_per_point = 1000
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
@@ -38,7 +38,6 @@ if __name__ == "__main__":
         dict_data['bin_width'] = np.diff(dict_data['theta']).min()
 
         n_particles = n_particles_per_point * len(dict_data['theta'])
-        n_particles = 25000
 
         index += 1
         new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_Nparticles{n_particles}_Nmin{n_min}_nlive{nlive}'
@@ -48,13 +47,10 @@ if __name__ == "__main__":
             M_stellar = STRRINGS_catalogue.iloc[index]['M_stream']/STRRINGS_catalogue.iloc[index]['M_stream/M_host']
             M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
 
-            # print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
-            # dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, nlive=nlive)
-            # with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
-            #     pickle.dump(dict_results, f)
-
-            with open(f'{new_PATH_DATA}/dict_results.pkl', 'rb') as f:
-                dict_results = pickle.load(f)
+            print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
+            dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, nlive=nlive)
+            with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
+                pickle.dump(dict_results, f)
 
             # Plot and Save corner plot
             labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
