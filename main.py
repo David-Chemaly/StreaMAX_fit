@@ -39,7 +39,7 @@ if __name__ == "__main__":
         dict_data['theta'] -= dict_data['delta_theta']
         dict_data['bin_width'] = np.diff(dict_data['theta']).min()
 
-        n_particles = jnp.maximum(n_particles_min, n_particles_per_point * len(dict_data['theta']))
+        n_particles = jnp.maximum(n_particles_min, n_particles_per_point * len(dict_data['theta'])).astype(int)
 
         index += 1
         new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_VarRatio{var_ratio}_Nparticles{n_particles}_Nmin{n_min}_nlive{nlive}'
