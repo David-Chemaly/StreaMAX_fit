@@ -21,7 +21,9 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 1
     nlive = 2000
+    var_ratio = 9.0
     n_particles_per_point = 1000
+    n_particles_min = 10000
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
@@ -37,10 +39,10 @@ if __name__ == "__main__":
         dict_data['theta'] -= dict_data['delta_theta']
         dict_data['bin_width'] = np.diff(dict_data['theta']).min()
 
-        n_particles = n_particles_per_point * len(dict_data['theta'])
+        n_particles = jnp.maximum(n_particles_min, n_particles_per_point * len(dict_data['theta']))
 
         index += 1
-        new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_Nparticles{n_particles}_Nmin{n_min}_nlive{nlive}'
+        new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_VarRatio{var_ratio}_Nparticles{n_particles}_Nmin{n_min}_nlive{nlive}'
         if not os.path.exists(new_PATH_DATA):         
             os.makedirs(new_PATH_DATA, exist_ok=True)
             
@@ -48,7 +50,7 @@ if __name__ == "__main__":
             M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
 
             print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
-            dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, nlive=nlive)
+            dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, nlive=nlive)
             with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
                 pickle.dump(dict_results, f)
 
