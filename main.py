@@ -21,7 +21,7 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 3
     nlive = 2000
-    # alpha = 0.01
+    alpha = 0.01
     var_ratio = 9.0
     n_particles_per_point = 2000
     n_particles_min = 20000
