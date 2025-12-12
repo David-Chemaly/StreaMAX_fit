@@ -21,7 +21,7 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 3
     nlive = 2000
-    alpha = 0.01
+    # alpha = 0.01
     var_ratio = 9.0
     n_particles_per_point = 2000
     n_particles_min = 20000
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         n_particles = jnp.maximum(n_particles_min, n_particles_per_point * len(dict_data['theta'])).item()
 
         index += 1
-        new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_ndim{ndim}_Nparticles{n_particles}_Nmin{n_min}_alpha{alpha}_VarRatio{var_ratio}_nlive{nlive}'
+        new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_ndim{ndim}_Nparticles{n_particles}_Nmin{n_min}_VarRatio{var_ratio}_nlive{nlive}'
         if not os.path.exists(new_PATH_DATA):         
             os.makedirs(new_PATH_DATA, exist_ok=True)
             
