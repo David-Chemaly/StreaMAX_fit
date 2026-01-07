@@ -23,11 +23,12 @@ if __name__ == "__main__":
     nlive = 2000
     alpha = 0.01
     var_ratio = 9.0
-    n_particles_per_point = 1500
+    n_particles_per_point = 2000
     n_particles_min = 10000
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
+    names = ['NGC1084_GROUP_factor2.5_pixscale0.6'] # targeted inference
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
 
     index = -1
