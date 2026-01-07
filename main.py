@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
-    names = ['UGC08717_factor3.0_pixscale0.6'] # targeted inference
+    names = ['UGC09239_factor2.5_pixscale0.6'] # targeted inference
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
 
     index = -1
