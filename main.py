@@ -30,7 +30,8 @@ if __name__ == "__main__":
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
 
-    list_undone_names = ['NGC1084', 'NGC1121', 'PGC000902', 'PGC039258', 'PGC938075', 'PGC1092512', 'UGC01424', 'UGC08717']
+    list_undone_names = ['NGC1084', 'PGC039258', 'PGC1092512', 'UGC01424', 'UGC08717']
+    # list_more = ['NGC1121', 'PGC938075', 'PGC000902']
 
     index = -1
     for name in tqdm(names, leave=True):
