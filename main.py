@@ -22,7 +22,7 @@ if __name__ == "__main__":
     n_min = 3
     nlive = 2000
     alpha = 0.01
-    var_ratio = 2.0
+    var_ratio = 4.0
     n_particles_per_point = 2000
     n_particles_min = 10000
 
@@ -31,7 +31,8 @@ if __name__ == "__main__":
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
 
     # list_undone_names = ['NGC1084', 'PGC039258', 'PGC1092512', 'UGC08717'] #UGC01424?
-    list_undone_names = ['NGC1121', 'PGC938075', 'PGC000902']
+    # list_undone_names = ['NGC1121', 'PGC938075', 'PGC000902']
+    list_undone_names = ['UGC01424']
 
     index = -1
     for name in tqdm(names, leave=True):
