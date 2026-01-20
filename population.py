@@ -121,52 +121,27 @@ if __name__ == "__main__":
     ndim = 2
     nlive = 500
 
-    sigma = 2
-    nlive = 2000
-    N_streams = 100
-    seeds = np.arange(N_streams)
-    path = '/data/dc824-2/MockStreams'
+    PATH_DATA = '/data/dc824-2/SGA_Streams/for_pop'
+    names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
 
-    q_true, q_fits = [], []
-    for seed in seeds:
-        path_seed = os.path.join(path, f'seed{seed}')
-        if os.path.exists(os.path.join(path_seed,  f'dict_results_nlive{nlive}_sigma{sigma}.pkl')):
-            with open(os.path.join(path_seed, f'dict_results_nlive{nlive}_sigma{sigma}.pkl'), "rb") as f:
+    q_fits = []
+    for name in names:
+        path_dict = f'{PATH_DATA}/{name}.pkl'
+        if os.path.exists(path_dict):
+            with open(path_dict, "rb") as f:
                 dict_results = pickle.load(f)
-            with open(os.path.join(path_seed, f'dict_stream.pkl'), "rb") as f:
-                dict_stream = pickle.load(f)
             q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
-            q_true.append(dict_stream['params'][2])
-    q_true = np.array(q_true)
-
-    q_true = q_true[arg_take]
-    new_q_fits = []
-    for arg in arg_take:
-        new_q_fits.append(q_fits[arg])
-    q_fits = new_q_fits
-
-    if fit_dist == 'uniform':
-        labels = [r'$a$', r'$b$']
-        print(f'Fitting {len(q_true)} using seed {sample_seed} streams with [{np.mean(q_true):.2f}, {abs(np.max(q_true)-np.min(q_true))/2:.2f}]')
-    elif fit_dist == 'gaussian':
-        labels = [r'$\mu$', r'$\sigma$']
-        print(f'Fitting {len(q_true)} using seed {sample_seed} streams with {np.mean(q_true):.2f} +/- {np.std(q_true):.2f}')
-    elif fit_dist == 'binomial':
-        labels = [r'$\mu_1$', r'$\mu_2$', r'$\sigma_1$', r'$\sigma_2$']
-        print(f'Fitting {len(q_true)} using seed {sample_seed} streams with {np.mean(q_true[q_true<1.0]):.2f} +/- {np.std(q_true[q_true<1.0]):.2f} and \
-                    {np.mean(q_true[q_true>=1.0]):.2f} +/- {np.std(q_true[q_true>=1.0]):.2f} instead of {true_a:.2f} +/- {true_b:.2f}')
 
     dict_results = dynesty_fit(q_fits, ndim=ndim, nlive=nlive, pop_type=fit_dist)
-    with open(os.path.join(path, f'dict_pop_nlive{nlive}_sigma{sigma}_N{len(q_true)}_'+fit_type+f'_{true_a}-{true_b}_seed{sample_seed}.pkl'), 'wb') as f:
+    with open(os.path.join(PATH_DATA, f'dict_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}.pkl'), 'wb') as f:
         pickle.dump(dict_results, f)
 
     # Plots the corner plots
     figure = corner.corner(dict_results['samps'], 
-            labels=labels,
             color='blue',
             quantiles=[0.16, 0.5, 0.84],
             show_titles=True, 
             title_kwargs={"fontsize": 16},
             truth_color='red')
-    figure.savefig(os.path.join(path, f'corner_plot_nlive{nlive}_sigma{sigma}_N{len(q_true)}.pdf'))
+    figure.savefig(os.path.join(PATH_DATA, f'corner_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}.pdf'), bbox_inches = 'tight', dpi = 300, transparent = True)
     plt.close(figure)
