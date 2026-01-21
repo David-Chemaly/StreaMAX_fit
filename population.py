@@ -124,14 +124,18 @@ if __name__ == "__main__":
     PATH_DATA = '/data/dc824-2/SGA_Streams/for_pop'
     names = np.loadtxt(f'{PATH_DATA}/../names.txt', dtype=str)
 
+    rm_names = ['NGC5387_factor2.5_pixscale0.6', 'PGC021008_factor2.5_pixscale0.6']
+
     q_fits = []
     for name in names:
-        path_dict = f'{PATH_DATA}/{name}.pkl'
-        if os.path.exists(path_dict):
-            with open(path_dict, "rb") as f:
-                dict_results = pickle.load(f)
-            q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
+        if name not in rm_names:
+            path_dict = f'{PATH_DATA}/{name}.pkl'
+            if os.path.exists(path_dict):
+                with open(path_dict, "rb") as f:
+                    dict_results = pickle.load(f)
+                q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
 
+    print(f'Fitting population with {len(q_fits)} streams using a {fit_dist} distribution')
     dict_results = dynesty_fit(q_fits, ndim=ndim, nlive=nlive, pop_type=fit_dist)
     with open(os.path.join(PATH_DATA, f'dict_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}.pkl'), 'wb') as f:
         pickle.dump(dict_results, f)
