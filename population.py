@@ -122,7 +122,7 @@ if __name__ == "__main__":
     nlive = 500
 
     PATH_DATA = '/data/dc824-2/SGA_Streams/for_pop'
-    names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
+    names = np.loadtxt(f'{PATH_DATA}/../names.txt', dtype=str)
 
     q_fits = []
     for name in names:
