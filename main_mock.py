@@ -23,8 +23,8 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
 
     # MW halo parameters
     params = np.zeros(ndim)
-    params[0] = 11.9  # logM
-    params[1] = 16.0   # Rs
+    params[0] = 12.0  # logM
+    params[1] = 16.0  # Rs
     params[2] = 1.0   # dirx
     params[3] = 1.0   # diry
     params[4] = 1.0   # dirz
@@ -34,7 +34,7 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         p = rng.uniform(0, 1, size=ndim)
         params[5:] = prior_transform(p)[5:]
 
-        theta_stream, r_stream, xv_stream, xv_sat = params_to_stream_DiskNFW(params)
+        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params)
         theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
         
         theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
@@ -61,8 +61,8 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         'params': params,
         'theta_stream': theta_stream,
         'r_stream': r_stream,
-        'x_stream': xv_stream[:, 0],
-        'y_stream': xv_stream[:, 1],
+        'x_stream': r_stream * jnp.cos(theta_stream),
+        'y_stream': r_stream * jnp.sin(theta_stream),
         'x_sat': xv_sat[:, 0],
         'y_sat': xv_sat[:, 1],
     }
@@ -71,8 +71,8 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
 
 def plot_mock_data_stream(path, dict_stream):
     # Plot the stream
-    plt.figure(figsize=(18, 7))
-    plt.subplot(1, 2, 1)
+    plt.figure(figsize=(18, 18))
+    plt.subplot(2, 2, 1)
     plt.scatter(dict_stream['x_stream'], dict_stream['y_stream'], s=0.1, cmap='seismic', c=dict_stream['theta_stream'], vmin=-2*np.pi, vmax=2*np.pi)
     plt.scatter(dict_stream['x_sat'][-1], dict_stream['y_sat'][-1], s=20, c='black')
     plt.axvline(0, color='k', linestyle='--', lw=1, c='gray')
@@ -80,12 +80,37 @@ def plot_mock_data_stream(path, dict_stream):
     plt.xlabel('X (kpc)')
     plt.ylabel('Y (kpc)')
     plt.axis('equal')
-    plt.subplot(1, 2, 2)
+    plt.subplot(2, 2, 2)
     plt.scatter(dict_stream['theta_stream'], dict_stream['r_stream'], s=0.1, cmap='seismic', c=dict_stream['theta_stream'], vmin=-2*np.pi, vmax=2*np.pi)
     plt.colorbar(label='Angle (rad)')
     plt.plot(dict_stream['theta'], dict_stream['r'], 'o', c='lime', markersize=4)
     plt.xlabel('Angle (rad)')
     plt.ylabel('Radius (kpc)')
+
+    theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(dict_stream['params'], disk_mass=0.)
+    x_stream = r_stream * jnp.cos(theta_stream)
+    y_stream = r_stream * jnp.sin(theta_stream)
+    theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
+    
+    theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
+    bin_width  = theta_bin[1] - theta_bin[0]
+    r_bin, w_bin, count = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
+
+    plt.subplot(2, 2, 3)
+    plt.scatter(x_stream, y_stream, s=0.1, cmap='seismic', c=theta_stream, vmin=-2*np.pi, vmax=2*np.pi)
+    plt.scatter(xv_sat[-1, 0], xv_sat[-1, 1], s=20, c='black')
+    plt.axvline(0, color='k', linestyle='--', lw=1, c='gray')
+    plt.axhline(0, color='k', linestyle='--', lw=1, c='gray')
+    plt.xlabel('X (kpc)')
+    plt.ylabel('Y (kpc)')
+    plt.axis('equal')
+    plt.subplot(2, 2, 4)
+    plt.scatter(theta_stream, r_stream, s=0.1, cmap='seismic', c=theta_stream, vmin=-2*np.pi, vmax=2*np.pi)
+    plt.colorbar(label='Angle (rad)')
+    plt.plot(theta_bin, r_bin, 'o', c='lime', markersize=4)
+    plt.xlabel('Angle (rad)')
+    plt.ylabel('Radius (kpc)')
+
     plt.tight_layout()
     plt.savefig(os.path.join(path, 'stream.pdf'))
     plt.close()

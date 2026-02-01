@@ -69,7 +69,7 @@ def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=Tru
 
     return theta_stream, r_stream, xv_stream
 
-def params_to_stream_DiskNFW(params, n_particles=10000, n_steps=99, alpha=1., unroll=True):
+def params_to_stream_DiskNFW(params, disk_mass=11.0, n_particles=10000, n_steps=99, alpha=1., unroll=True):
     # Disk + NFW halo
     type_host  = 'DiskNFW'
     params_host = {'NFW_params': {'logM': params[0], 'Rs': params[1],
@@ -78,7 +78,7 @@ def params_to_stream_DiskNFW(params, n_particles=10000, n_steps=99, alpha=1., un
                                     'x_origin': 0.0, 'y_origin': 0.0, 'z_origin': 0.0},
 
                 # MW disk
-                'MN_params': {'logM': 10.8, 'Rs': 3., 'Hs': 0.28,
+                'MN_params': {'logM': disk_mass, 'Rs': 3., 'Hs': 0.3,
                                 'dirx': 1.0, 'diry': 1.0, 'dirz': 1.0,
                                 'x_origin': 0.0, 'y_origin': 0.0, 'z_origin': 0.0},
                 }
