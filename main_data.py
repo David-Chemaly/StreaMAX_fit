@@ -21,7 +21,6 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 3
     nlive = 2000
-    alpha = 0.01
     var_ratio = 4.0
     n_particles_per_point = 2000
     n_particles_min = 10000
@@ -59,7 +58,7 @@ if __name__ == "__main__":
                 M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
 
                 print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
-                dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, alpha=alpha, var_ratio=var_ratio, nlive=nlive)
+                dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, nlive=nlive)
                 with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
                     pickle.dump(dict_results, f)
 

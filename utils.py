@@ -69,6 +69,41 @@ def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=Tru
 
     return theta_stream, r_stream, xv_stream
 
+def params_to_stream_DiskNFW(params, n_particles=10000, n_steps=99, alpha=1., unroll=True):
+    # Disk + NFW halo
+    type_host  = 'DiskNFW'
+    params_host = {'NFW_params': {'logM': params[0], 'Rs': params[1],
+                                    'a': 1.0, 'b': 1.0, 'c': get_q(params[2], params[3], params[4]),
+                                    'dirx': params[2], 'diry': params[3], 'dirz': params[4],
+                                    'x_origin': 0.0, 'y_origin': 0.0, 'z_origin': 0.0},
+
+                'MN_params': {'logM': 10.0, 'Rs': 2., 'z0': 1.0,
+                                'dirx': 1.0, 'diry': 1.0, 'dirz': 1.0,
+                                'x_origin': 0.0, 'y_origin': 0.0, 'z_origin': 0.0},
+                }
+
+    # Plummer Sattelite
+    type_sat   = 'Plummer'
+    params_sat = {'logM': params[5], 'Rs': params[6],
+                    'x_origin': params[7], 'y_origin': 0.0, 'z_origin': params[8]}
+
+    # Initial conditions
+    xv_f = jnp.array([params[7], 0.0, params[8],  # Position in kpc
+                    params[9], params[10], params[11]])   # Velocity in kpc/Gyr
+
+    # Integration time
+    time  = params[12] # Gyr
+
+    _, xv_sat, xv_stream, xhi_stream = StreaMAX.generate_stream(xv_f, 
+                                                            type_host, params_host, 
+                                                            type_sat, params_sat, 
+                                                            time, alpha, n_steps,
+                                                            n_particles, 
+                                                            unroll)
+    _, _, theta_stream, r_stream, _ = StreaMAX.get_stream_ordered(xv_stream[:, 0], xv_stream[:, 1], xhi_stream)
+
+    return theta_stream, r_stream, xv_stream, xv_sat
+
 def get_residuals_and_mask(path, sga, name, vminperc=35, vmaxperc=90):
     # Load Residuals
     with fits.open(f"{path}/{name}/data.fits") as hdul:
