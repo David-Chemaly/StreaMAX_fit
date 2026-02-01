@@ -21,9 +21,10 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     is_data = False
     rng = np.random.default_rng(int(seed))
 
+    # MW halo parameters
     params = np.zeros(ndim)
-    params[0] = 12.0  # logM
-    params[1] = 5.0   # Rs
+    params[0] = 11.9  # logM
+    params[1] = 16.0   # Rs
     params[2] = 1.0   # dirx
     params[3] = 1.0   # diry
     params[4] = 1.0   # dirz
