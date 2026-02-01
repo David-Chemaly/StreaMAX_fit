@@ -83,7 +83,7 @@ def plot_mock_data_stream(path, dict_stream):
     plt.subplot(1, 2, 2)
     plt.scatter(dict_stream['theta_stream'], dict_stream['r_stream'], s=0.1, cmap='seismic', c=dict_stream['theta_stream'], vmin=-2*np.pi, vmax=2*np.pi)
     plt.colorbar(label='Angle (rad)')
-    plt.plot(dict_stream['theta_bin'], dict_stream['r_bin'], 'o', c='lime', markersize=4)
+    plt.plot(dict_stream['theta'], dict_stream['r'], 'o', c='lime', markersize=4)
     plt.xlabel('Angle (rad)')
     plt.ylabel('Radius (kpc)')
     plt.tight_layout()
