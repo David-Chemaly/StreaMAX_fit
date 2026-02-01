@@ -51,11 +51,14 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         if crit1 and crit2 and crit3 and crit4 and crit5 and crit6: 
             is_data = True
 
+    r_sig = r_bin * sigma / 100
+    r_obs = rng.normal(r_bin, r_sig)
+
     dict_stream = {
         'theta': theta_bin,
         'bin_width': bin_width,
-        'r': r_bin,
-        'r_err': w_bin/np.sqrt(count),
+        'r': r_obs,
+        'r_err': r_sig,
         'count': count,
 
         'params': params,
