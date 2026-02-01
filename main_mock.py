@@ -33,7 +33,7 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         p = rng.uniform(0, 1, size=ndim)
         params[5:] = prior_transform(p)[5:]
 
-        theta_stream, r_stream, xv_stream, xv_sat = params_to_stream_DiskNFW(params,  seed=111)
+        theta_stream, r_stream, xv_stream, xv_sat = params_to_stream_DiskNFW(params)
         theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
         
         theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
