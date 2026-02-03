@@ -21,9 +21,10 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 3
     nlive = 2000
-    var_ratio = 9.0
-    n_particles_per_point = 1000
+    var_ratio = 4.0
+    n_particles_per_point = 1500
     n_particles_min = 10000
+    min_err = 1.0
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
@@ -31,7 +32,8 @@ if __name__ == "__main__":
 
     # list_undone_names = ['ESO079-003_GROUP_factor2.5_pixscale0.6', 'NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
     #                         'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6', 'UGC01245_factor4.5_pixscale0.6']
-    list_undone_names = ['UGC01245']
+    list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
+                            'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6']
 
     index = -1
     for name in tqdm(names, leave=True):
@@ -50,7 +52,7 @@ if __name__ == "__main__":
             n_particles = jnp.maximum(n_particles_min, n_particles_per_point * len(dict_data['theta'])).item()
 
             
-            new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_ndim{ndim}_Nparticles{n_particles}_Nmin{n_min}_VarRatio{var_ratio}_nlive{nlive}'
+            new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_ndim{ndim}_Nparticles{n_particles}_Nmin{n_min}_VarRatio{var_ratio}_minErr_{min_err}_nlive{nlive}'
             if not os.path.exists(new_PATH_DATA):         
                 os.makedirs(new_PATH_DATA, exist_ok=True)
                 
@@ -58,7 +60,7 @@ if __name__ == "__main__":
                 M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
 
                 print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
-                dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, nlive=nlive)
+                dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, min_err=min_err, nlive=nlive)
                 with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
                     pickle.dump(dict_results, f)
 
