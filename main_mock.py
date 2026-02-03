@@ -41,21 +41,25 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         bin_width  = theta_bin[1] - theta_bin[0]
         r_bin, w_bin, count = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
 
-        crit1 = jnp.all(jnp.diff(jnp.where(count > min_count)[0]) == 1) # Must be continuous and
-        crit2 = jnp.sum(jnp.where(count > min_count, 1, 0)) > 9   # Must have at least 10 bins with more than 100 particles
-        crit3 = jnp.nansum(r_bin[:-1]*jnp.tanh(jnp.diff(theta_bin))) > 100 # Must have length of at least 100kpc
+        arg_take = jnp.where(count > min_count)[0]
+        theta_in = theta_bin[arg_take]
+        r_in     = r_bin[arg_take]
+
+        crit1 = jnp.all(jnp.diff(arg_take) == 1) # Must be continuous and
+        crit2 = len(arg_take) > 12   # Must have at least 10 bins with more than 100 particles
+        crit3 = jnp.nansum(r_in[:-1]*jnp.tanh(jnp.diff(theta_in))) > 100 # Must have length of at least 100kpc
         crit4 = jnp.min(r_stream) > 2  # Must be further than 2kpc minimum
-        crit5 = jnp.max(r_stream) < 500  # Must be less than 500kpc
+        crit5 = jnp.max(r_stream) < 200  # Must be less than 200kpc
         crit6 = jnp.all(jnp.diff(theta_sat) > 0)  # Must be monotonic
 
         if crit1 and crit2 and crit3 and crit4 and crit5 and crit6: 
             is_data = True
 
-    r_sig = r_bin * sigma / 100
-    r_obs = rng.normal(r_bin, r_sig)
+    r_sig = r_in * sigma / 100
+    r_obs = rng.normal(r_in, r_sig)
 
     dict_stream = {
-        'theta': theta_bin,
+        'theta': theta_in,
         'bin_width': bin_width,
         'r': r_obs,
         'r_err': r_sig,
