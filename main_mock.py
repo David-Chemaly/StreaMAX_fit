@@ -46,7 +46,7 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         r_in     = r_bin[arg_take]
 
         crit1 = jnp.all(jnp.diff(arg_take) == 1) # Must be continuous and
-        crit2 = len(arg_take) > 12   # Must have at least 10 bins with more than 100 particles
+        crit2 = len(arg_take) > 9   # Must have at least 10 bins with more than 100 particles
         crit3 = jnp.nansum(r_in[:-1]*jnp.tanh(jnp.diff(theta_in))) > 100 # Must have length of at least 100kpc
         crit4 = jnp.min(r_stream) > 2  # Must be further than 2kpc minimum
         crit5 = jnp.max(r_stream) < 200  # Must be less than 200kpc
@@ -124,7 +124,7 @@ def plot_mock_data_stream(path, dict_stream):
 
 if __name__ == "__main__":
     N = 10
-    seeds = np.arange(N)
+    seeds = np.arange(N)+1
 
     ndim  = 14
     n_min = 9
