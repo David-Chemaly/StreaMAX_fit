@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     # list_undone_names = ['ESO079-003_GROUP_factor2.5_pixscale0.6', 'NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
     #                         'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6', 'UGC01245_factor4.5_pixscale0.6']
-    list_undone_names = ['UGC01245'] #['NGC1084', 'NGC1121', 'PGC000902', 'PGC039258', 'PGC1092512', 'PGC938075']
+    list_undone_names = ['ESO079-003'] #['NGC1084', 'NGC1121', 'PGC000902', 'PGC039258', 'PGC1092512', 'PGC938075']
 
     index = -1
     for name in tqdm(names, leave=True):
