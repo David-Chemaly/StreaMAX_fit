@@ -111,7 +111,7 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 9
     nlive = 2000
-    var_ratio = np.inf
+    var_ratio = 1e-10
     n_particles = 10000
 
     sigma = 2
