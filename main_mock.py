@@ -29,7 +29,7 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     params[3] = 1.0   # diry
     params[4] = 0.605   # dirz
     # Give get_q of approx 1
-    disk_mass = 10.0
+    disk_mass = np.log10(0.04*10**params[0])
 
     while not is_data:
         # Resample parameters
