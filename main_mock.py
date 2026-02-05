@@ -29,13 +29,14 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     params[3] = 1.0   # diry
     params[4] = 0.605   # dirz
     # Give get_q of approx 1
+    disk_mass = 10.0
 
     while not is_data:
         # Resample parameters
         p = rng.uniform(0, 1, size=ndim)
         params[5:] = prior_transform(p)[5:]
 
-        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params)
+        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, disk_mass=disk_mass)
         theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
         
         theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
