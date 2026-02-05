@@ -27,7 +27,8 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     params[1] = 16.0  # Rs
     params[2] = 1.0   # dirx
     params[3] = 1.0   # diry
-    params[4] = 1.0   # dirz
+    params[4] = 0.605   # dirz
+    # Give get_q of approx 1
 
     while not is_data:
         # Resample parameters
@@ -39,7 +40,7 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         
         theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
         bin_width  = theta_bin[1] - theta_bin[0]
-        r_bin, w_bin, count = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
+        r_bin, _, count = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
 
         arg_take = jnp.where(count > min_count)[0]
         theta_in = theta_bin[arg_take]
@@ -159,10 +160,14 @@ if __name__ == "__main__":
             x_bin = r_bin * np.cos(dict_data['theta'])
             y_bin = r_bin * np.sin(dict_data['theta'])
 
-            plt.figure(figsize=(12, 8))
+            plt.figure(figsize=(14, 8))
             plt.subplot(1, 2, 1)
             plt.scatter(xv_stream[:, 0], xv_stream[:, 1], c='blue', s=1, label='Best fit')
-            plt.scatter(x_bin, y_bin, color='red', s=10, label='Data')
+            plt.scatter(x_bin, y_bin, color='red', s=20, label='Data')
+            plt.xlabel('X (kpc)')
+            plt.ylabel('Y (kpc)')
+            plt.axis('equal')
+            plt.legend()
 
             plt.subplot(1, 2, 2)
             q_samps = get_q(dict_results['samps'][:, 2], dict_results['samps'][:, 3], dict_results['samps'][:, 4])
@@ -170,9 +175,10 @@ if __name__ == "__main__":
             plt.axvline(np.median(q_samps), color='blue', linestyle='--', lw=2)
             plt.axvline(np.percentile(q_samps, 16), color='blue', linestyle=':', lw=2)
             plt.axvline(np.percentile(q_samps, 84), color='blue', linestyle=':', lw=2)
-            plt.axvline(1.0, color='k', linestyle='-', lw=2)
+            plt.axvline(get_q(dict_data['params'][2], dict_data['params'][3], dict_data['params'][4]), color='red', linestyle='-', lw=2)
             plt.xlabel('Halo Flattening')
-            plt.ylabel('Density')
+            plt.xlim(0.5, 1.5)
+            plt.yticks([])
 
             plt.tight_layout()
             plt.savefig(f'{path}/best_fit.pdf')
