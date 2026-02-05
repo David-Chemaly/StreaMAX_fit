@@ -78,43 +78,27 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
 
 def plot_mock_data_stream(path, dict_stream):
     # Plot the stream
-    plt.figure(figsize=(18, 18))
-    plt.subplot(2, 2, 1)
-    plt.scatter(dict_stream['x_stream'], dict_stream['y_stream'], s=0.1, cmap='seismic', c=dict_stream['theta_stream'], vmin=-2*np.pi, vmax=2*np.pi)
-    plt.scatter(dict_stream['x_sat'][-1], dict_stream['y_sat'][-1], s=20, c='black')
-    plt.axvline(0, color='k', linestyle='--', lw=1, c='gray')
-    plt.axhline(0, color='k', linestyle='--', lw=1, c='gray')
-    plt.xlabel('X (kpc)')
-    plt.ylabel('Y (kpc)')
-    plt.axis('equal')
-    plt.subplot(2, 2, 2)
-    plt.scatter(dict_stream['theta_stream'], dict_stream['r_stream'], s=0.1, cmap='seismic', c=dict_stream['theta_stream'], vmin=-2*np.pi, vmax=2*np.pi)
-    plt.colorbar(label='Angle (rad)')
-    plt.plot(dict_stream['theta'], dict_stream['r'], 'o', c='lime', markersize=4)
-    plt.xlabel('Angle (rad)')
-    plt.ylabel('Radius (kpc)')
-
-    theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(dict_stream['params'], disk_mass=0.)
-    x_stream = r_stream * jnp.cos(theta_stream)
-    y_stream = r_stream * jnp.sin(theta_stream)
-    theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
+    plt.figure(figsize=(12, 8))
+    plt.subplot(1, 2, 1)
+    plt.plot(dict_stream['r']*np.cos(dict_stream['theta']), dict_stream['r']*np.sin(dict_stream['theta']), '-o', c='black')
     
+    theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(dict_stream['params'], disk_mass=0.)
     theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
     bin_width  = theta_bin[1] - theta_bin[0]
-    r_bin, w_bin, count = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
-
-    plt.subplot(2, 2, 3)
-    plt.scatter(x_stream, y_stream, s=0.1, cmap='seismic', c=theta_stream, vmin=-2*np.pi, vmax=2*np.pi)
-    plt.scatter(xv_sat[-1, 0], xv_sat[-1, 1], s=20, c='black')
-    plt.axvline(0, color='k', linestyle='--', lw=1, c='gray')
-    plt.axhline(0, color='k', linestyle='--', lw=1, c='gray')
+    r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
+    x_bin = r_bin * np.cos(theta_bin)
+    y_bin = r_bin * np.sin(theta_bin)
+    plt.plot(x_bin, y_bin, '-o', c='red')
+    
     plt.xlabel('X (kpc)')
     plt.ylabel('Y (kpc)')
     plt.axis('equal')
-    plt.subplot(2, 2, 4)
-    plt.scatter(theta_stream, r_stream, s=0.1, cmap='seismic', c=theta_stream, vmin=-2*np.pi, vmax=2*np.pi)
-    plt.colorbar(label='Angle (rad)')
-    plt.plot(theta_bin, r_bin, 'o', c='lime', markersize=4)
+
+
+    plt.subplot(1, 2, 2)
+    plt.plot(dict_stream['theta'], dict_stream['r'], '-o', c='black', label='with disk')
+    plt.plot(dict_stream['theta'], r_bin, '-o', c='red', label='no disk')
+    plt.legend()
     plt.xlabel('Angle (rad)')
     plt.ylabel('Radius (kpc)')
 
@@ -129,7 +113,7 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 9
     nlive = 2000
-    var_ratio = -1.0
+    var_ratio = np.inf
     n_particles = 10000
 
     sigma = 2
@@ -184,7 +168,6 @@ if __name__ == "__main__":
 
             plt.subplot(1, 2, 2)
             q_samps = get_q(dict_results['samps'][:, 2], dict_results['samps'][:, 3], dict_results['samps'][:, 4])
-            plt.figure(figsize=(8, 6))
             plt.hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
             plt.axvline(np.median(q_samps), color='blue', linestyle='--', lw=2)
             plt.axvline(np.percentile(q_samps, 16), color='blue', linestyle=':', lw=2)
