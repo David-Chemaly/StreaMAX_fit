@@ -82,12 +82,10 @@ def plot_mock_data_stream(path, dict_stream):
     plt.subplot(1, 2, 1)
     plt.plot(dict_stream['r']*np.cos(dict_stream['theta']), dict_stream['r']*np.sin(dict_stream['theta']), '-o', c='black')
     
-    theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(dict_stream['params'], disk_mass=0.)
-    theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
-    bin_width  = theta_bin[1] - theta_bin[0]
-    r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
-    x_bin = r_bin * np.cos(theta_bin)
-    y_bin = r_bin * np.sin(theta_bin)
+    theta_stream, r_stream, _, _ = params_to_stream_DiskNFW(dict_stream['params'], disk_mass=0.)
+    r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_stream['theta'], dict_stream['bin_width'])
+    x_bin = r_bin * np.cos(dict_stream['theta'])
+    y_bin = r_bin * np.sin(dict_stream['theta'])
     plt.plot(x_bin, y_bin, '-o', c='red')
     
     plt.xlabel('X (kpc)')
