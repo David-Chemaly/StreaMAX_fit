@@ -23,20 +23,25 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
 
     # MW halo parameters
     params = np.zeros(ndim)
-    params[0] = 12.0  # logM
-    params[1] = 16.0  # Rs
+    params[:2] = prior_transform(rng.uniform(0, 1, size=ndim))[:2] # logM and Rs
+
+    # Give get_q of approx 1
     params[2] = 1.0   # dirx
     params[3] = 1.0   # diry
     params[4] = 0.605   # dirz
-    # Give get_q of approx 1
-    disk_mass = np.log10(0.04*10**params[0])
+    
+    disk_ratio = rng.uniform(1, 10)/100
+    disk_mass  = np.log10(disk_ratio*10**params[0]) 
+    disk_Rs    = rng.uniform(1, 5)
+    disk_Hs    = rng.uniform(0.1, 0.5)
+    params_disk = [disk_mass, disk_Rs, disk_Hs]
 
     while not is_data:
         # Resample parameters
         p = rng.uniform(0, 1, size=ndim)
-        params[5:] = prior_transform(p)[5:]
+        params[:5] = prior_transform(p)[:5]
 
-        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, disk_mass=disk_mass)
+        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, params_disk)
         theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
         
         theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
@@ -48,8 +53,8 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         r_in     = r_bin[arg_take]
 
         crit1 = jnp.all(jnp.diff(arg_take) == 1) # Must be continuous and
-        crit2 = len(arg_take) > 9   # Must have at least 10 bins with more than 100 particles
-        crit3 = jnp.nansum(r_in[:-1]*jnp.tanh(jnp.diff(theta_in))) > 100 # Must have length of at least 100kpc
+        crit2 = len(arg_take) > 10   # Must have at least 10 bins with more than 100 particles
+        crit3 = jnp.nansum(r_in[:-1]*jnp.tanh(jnp.diff(theta_in))) > 50 # Must have length of at least 100kpc
         crit4 = jnp.min(r_stream) > 2  # Must be further than 2kpc minimum
         crit5 = jnp.max(r_stream) < 200  # Must be less than 200kpc
         crit6 = jnp.all(jnp.diff(theta_sat) > 0)  # Must be monotonic
@@ -68,6 +73,7 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         'count': count,
 
         'params': params,
+        'params_disk': params_disk,
         'theta_stream': theta_stream,
         'r_stream': r_stream,
         'x_stream': r_stream * jnp.cos(theta_stream),
@@ -107,7 +113,7 @@ def plot_mock_data_stream(path, dict_stream):
     plt.close()
 
 if __name__ == "__main__":
-    N = 10
+    N = 100
     seeds = np.arange(N)+1
 
     ndim  = 14
@@ -119,7 +125,7 @@ if __name__ == "__main__":
     sigma = 2
 
     for seed in tqdm(seeds, leave=True):
-        path = f'/data/dc824-2/MockStreamsWrong/seed{seed}'
+        path = f'/data/dc824-2/MockStreamsDisk/seed{seed}'
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
