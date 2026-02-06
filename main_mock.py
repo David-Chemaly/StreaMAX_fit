@@ -33,7 +33,8 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     disk_ratio = rng.uniform(1, 10)/100
     disk_mass  = np.log10(disk_ratio*10**params[0]) 
     disk_Rs    = rng.uniform(1, 5)
-    disk_Hs    = rng.uniform(0.1, 0.5)
+    disk_Hs_ratio    = rng.uniform(0.05, 0.25)
+    disk_Hs = disk_Hs_ratio * disk_Rs
     params_disk = [disk_mass, disk_Rs, disk_Hs]
 
     while not is_data:
