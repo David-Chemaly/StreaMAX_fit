@@ -91,7 +91,9 @@ def plot_mock_data_stream(path, dict_stream):
     plt.subplot(1, 2, 1)
     plt.plot(dict_stream['r']*np.cos(dict_stream['theta']), dict_stream['r']*np.sin(dict_stream['theta']), '-o', c='black')
     
-    theta_stream, r_stream, _, _ = params_to_stream_DiskNFW(dict_stream['params'], disk_mass=0.)
+    params_disk = dict_stream['params_disk']
+    params_disk[0] = 0.0 # Set disk mass to 0 for plotting the stream without disk
+    theta_stream, r_stream, _, _ = params_to_stream_DiskNFW(dict_stream['params'], params_disk)
     r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_stream['theta'], dict_stream['bin_width'])
     x_bin = r_bin * np.cos(dict_stream['theta'])
     y_bin = r_bin * np.sin(dict_stream['theta'])
