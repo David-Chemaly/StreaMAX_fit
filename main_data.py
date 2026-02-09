@@ -17,22 +17,81 @@ from prior import *
 from llikelihood import *
 from fit import *
 
+def extra_processing(name, dict_data):
+        if name == 'NGC1084_GROUP_factor2.5_pixscale0.6':
+            arg_region = np.array([ 4, 9, 14, 22, 28, 33, 35, 40, 42])
+            for ar in range(len(arg_region)-1):
+                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = np.median(dict_data['theta'][arg_region[ar]:arg_region[ar+1]])
+                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = np.mean(dict_data['r'][arg_region[ar]:arg_region[ar+1]])
+                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = np.sqrt(np.mean(dict_data['r_err'][arg_region[ar]:arg_region[ar+1]]**2))
+            keep_indices = [arg_region[ar] for ar in range(len(arg_region)-1)]
+            all_indices = np.arange(len(dict_data['theta']))
+            region_indices = np.concatenate([np.arange(arg_region[ar], arg_region[ar+1]) for ar in range(len(arg_region)-1)])
+            other_indices = np.setdiff1d(all_indices, region_indices)
+            final_indices = np.sort(np.concatenate([keep_indices, other_indices]))
+            dict_data['theta'] = dict_data['theta'][final_indices]
+            dict_data['r'] = dict_data['r'][final_indices]
+            dict_data['r_err'] = dict_data['r_err'][final_indices]
+        elif name == 'NGC1121_factor6.5_pixscale0.6':
+            arg_region = np.array([ 2, 8, 13, 17, 21, 25, 30, 35, 40, 44, 49, 55, 60, 64, 69])
+            for ar in range(len(arg_region)-1):
+                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = np.median(dict_data['theta'][arg_region[ar]:arg_region[ar+1]])
+                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = np.mean(dict_data['r'][arg_region[ar]:arg_region[ar+1]])
+                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = np.sqrt(np.mean(dict_data['r_err'][arg_region[ar]:arg_region[ar+1]]**2))
+            keep_indices = [arg_region[ar] for ar in range(len(arg_region)-1)]
+            all_indices = np.arange(len(dict_data['theta']))
+            region_indices = np.concatenate([np.arange(arg_region[ar], arg_region[ar+1]) for ar in range(len(arg_region)-1)])
+            other_indices = np.setdiff1d(all_indices, region_indices)
+            final_indices = np.sort(np.concatenate([keep_indices, other_indices]))
+            dict_data['theta'] = dict_data['theta'][final_indices]
+            dict_data['r'] = dict_data['r'][final_indices]
+            dict_data['r_err'] = dict_data['r_err'][final_indices]
+        elif name == 'PGC000902_factor4.0_pixscale0.6':
+            arg_take = np.where((dict_data['theta'] > 8.5))[0]
+            dict_data['theta'] = dict_data['theta'][arg_take]
+            dict_data['r'] = dict_data['r'][arg_take]
+            dict_data['r_err'] = dict_data['r_err'][arg_take]
+        elif name == 'PGC039258_factor2.5_pixscale0.6':
+            arg_region = np.array([ 2, 7, 12, 16, 21])
+            for ar in range(len(arg_region)-1):
+                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = np.median(dict_data['theta'][arg_region[ar]:arg_region[ar+1]])
+                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = np.mean(dict_data['r'][arg_region[ar]:arg_region[ar+1]])
+                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = np.sqrt(np.mean(dict_data['r_err'][arg_region[ar]:arg_region[ar+1]]**2))
+            keep_indices = [arg_region[ar] for ar in range(len(arg_region)-1)]
+            all_indices = np.arange(len(dict_data['theta']))
+            region_indices = np.concatenate([np.arange(arg_region[ar], arg_region[ar+1]) for ar in range(len(arg_region)-1)])
+            other_indices = np.setdiff1d(all_indices, region_indices)
+            final_indices = np.sort(np.concatenate([keep_indices, other_indices]))
+            dict_data['theta'] = dict_data['theta'][final_indices]
+            dict_data['r'] = dict_data['r'][final_indices]
+            dict_data['r_err'] = dict_data['r_err'][final_indices]
+        elif name == 'PGC1092512_factor2.5_pixscale0.6':
+            arg_take = np.where((dict_data['theta'] > 10))[0]
+            dict_data['theta'] = dict_data['theta'][arg_take]
+            dict_data['r'] = dict_data['r'][arg_take]
+            dict_data['r_err'] = dict_data['r_err'][arg_take]
+        elif name == 'PGC938075_factor4.5_pixscale0.6':
+            dict_data['r_err'] *= 100
+            dict_data['r'] *= 100
+        else:
+            print('No extra processing for this stream')
+
+        return dict_data
+
 if __name__ == "__main__":
     ndim  = 14
     n_min = 3
     nlive = 2000
     var_ratio = 9.0
-    n_particles_per_point = 2000
+    n_particles_per_point = 1500
     n_particles_min = 10000
-    min_err = 0.0
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
 
-    # list_undone_names = ['ESO079-003_GROUP_factor2.5_pixscale0.6', 'NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
-    #                         'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6', 'UGC01245_factor4.5_pixscale0.6']
-    list_undone_names = ['ESO079-003'] #['NGC1084', 'NGC1121', 'PGC000902', 'PGC039258', 'PGC1092512', 'PGC938075']
+    list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
+                            'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6']
 
     index = -1
     for name in tqdm(names, leave=True):
@@ -50,8 +109,7 @@ if __name__ == "__main__":
 
             n_particles = jnp.maximum(n_particles_min, n_particles_per_point * len(dict_data['theta'])).item()
 
-            
-            new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_ndim{ndim}_Nparticles{n_particles}_Nmin{n_min}_VarRatio{var_ratio}_minErr_{min_err}_nlive{nlive}'
+            new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_Transform_ndim{ndim}_Nparticles{n_particles}_Nmin{n_min}_VarRatio{var_ratio}_nlive{nlive}'
             if not os.path.exists(new_PATH_DATA):         
                 os.makedirs(new_PATH_DATA, exist_ok=True)
                 
@@ -59,7 +117,7 @@ if __name__ == "__main__":
                 M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
 
                 print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
-                dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, min_err=min_err, nlive=nlive)
+                dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, nlive=nlive)
                 with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
                     pickle.dump(dict_results, f)
 
@@ -108,6 +166,8 @@ if __name__ == "__main__":
 
                 sga = Table.read(f'{PATH_DATA}/SGA-2020.fits', hdu=1)
                 residual, mask, z_redshift, pixel_to_kpc, PA = get_residuals_and_mask(PATH_DATA, sga, name)
+                if name == 'PGC938075_factor4.5_pixscale0.6':
+                    pixel_to_kpc *= 100
                 center_x, center_y = residual.shape[1]//2, residual.shape[0]//2
 
                 plt.figure(figsize=(12, 8))
