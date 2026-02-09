@@ -83,7 +83,7 @@ if __name__ == "__main__":
     n_min = 3
     nlive = 2000
     var_ratio = 9.0
-    n_particles_per_point = 1500
+    n_particles_per_point = 2000
     n_particles_min = 10000
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
