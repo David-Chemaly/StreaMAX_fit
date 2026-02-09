@@ -97,7 +97,7 @@ if __name__ == "__main__":
     for name in tqdm(names, leave=True):
         index += 1
 
-        if name.split('_')[0] in list_undone_names:
+        if name in list_undone_names:
 
             with open(f"{PATH_DATA}/{name}/dict_track.pkl", "rb") as f:
                 dict_data = pickle.load(f)
