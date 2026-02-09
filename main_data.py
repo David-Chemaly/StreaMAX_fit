@@ -98,10 +98,10 @@ if __name__ == "__main__":
         index += 1
 
         if name in list_undone_names:
-
             with open(f"{PATH_DATA}/{name}/dict_track.pkl", "rb") as f:
                 dict_data = pickle.load(f)
-            
+            dict_data = extra_processing(name, dict_data)
+
             # This sets the progenitor in the middle of the stream
             dict_data['delta_theta'] = np.median(dict_data['theta'])
             dict_data['theta'] -= dict_data['delta_theta']
