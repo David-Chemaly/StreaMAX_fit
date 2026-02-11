@@ -19,11 +19,11 @@ from fit import *
 
 def extra_processing(name, dict_data):
         if name == 'NGC1084_GROUP_factor2.5_pixscale0.6':
-            arg_region = np.array([ 4, 9, 14, 22, 28, 33, 35, 40, 42])
+            arg_region = np.array([ 4, 6, 9, 14, 18, 22, 25, 28, 30, 33, 35, 37, 40, 42])
             for ar in range(len(arg_region)-1):
-                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = np.median(dict_data['theta'][arg_region[ar]:arg_region[ar+1]])
-                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = np.mean(dict_data['r'][arg_region[ar]:arg_region[ar+1]])
-                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = np.sqrt(np.mean(dict_data['r_err'][arg_region[ar]:arg_region[ar+1]]**2))
+                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = dict_data['theta'][arg_region[ar]]
+                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = dict_data['r'][arg_region[ar]]
+                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = dict_data['r_err'][arg_region[ar]]
             keep_indices = [arg_region[ar] for ar in range(len(arg_region)-1)]
             all_indices = np.arange(len(dict_data['theta']))
             region_indices = np.concatenate([np.arange(arg_region[ar], arg_region[ar+1]) for ar in range(len(arg_region)-1)])
@@ -33,11 +33,11 @@ def extra_processing(name, dict_data):
             dict_data['r'] = dict_data['r'][final_indices]
             dict_data['r_err'] = dict_data['r_err'][final_indices]
         elif name == 'NGC1121_factor6.5_pixscale0.6':
-            arg_region = np.array([ 2, 8, 13, 17, 21, 25, 30, 35, 40, 44, 49, 55, 60, 64, 69])
+            arg_region = np.array([ 2, 6, 10, 15, 17, 19, 21, 23, 25, 27, 30, 35, 40, 42, 45, 47, 49, 52, 55, 57, 60, 64, 67, 69])
             for ar in range(len(arg_region)-1):
-                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = np.median(dict_data['theta'][arg_region[ar]:arg_region[ar+1]])
-                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = np.mean(dict_data['r'][arg_region[ar]:arg_region[ar+1]])
-                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = np.sqrt(np.mean(dict_data['r_err'][arg_region[ar]:arg_region[ar+1]]**2))
+                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = dict_data['theta'][arg_region[ar]]
+                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = dict_data['r'][arg_region[ar]]
+                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = dict_data['r_err'][arg_region[ar]]
             keep_indices = [arg_region[ar] for ar in range(len(arg_region)-1)]
             all_indices = np.arange(len(dict_data['theta']))
             region_indices = np.concatenate([np.arange(arg_region[ar], arg_region[ar+1]) for ar in range(len(arg_region)-1)])
@@ -52,11 +52,11 @@ def extra_processing(name, dict_data):
             dict_data['r'] = dict_data['r'][arg_take]
             dict_data['r_err'] = dict_data['r_err'][arg_take]
         elif name == 'PGC039258_factor2.5_pixscale0.6':
-            arg_region = np.array([ 2, 7, 12, 16, 21])
+            arg_region = np.array([ 2, 4, 7, 10, 12, 14, 16, 18, 21])
             for ar in range(len(arg_region)-1):
-                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = np.median(dict_data['theta'][arg_region[ar]:arg_region[ar+1]])
-                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = np.mean(dict_data['r'][arg_region[ar]:arg_region[ar+1]])
-                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = np.sqrt(np.mean(dict_data['r_err'][arg_region[ar]:arg_region[ar+1]]**2))
+                dict_data['theta'][arg_region[ar]:arg_region[ar+1]] = dict_data['theta'][arg_region[ar]]
+                dict_data['r'][arg_region[ar]:arg_region[ar+1]] = dict_data['r'][arg_region[ar]]
+                dict_data['r_err'][arg_region[ar]:arg_region[ar+1]] = dict_data['r_err'][arg_region[ar]]
             keep_indices = [arg_region[ar] for ar in range(len(arg_region)-1)]
             all_indices = np.arange(len(dict_data['theta']))
             region_indices = np.concatenate([np.arange(arg_region[ar], arg_region[ar+1]) for ar in range(len(arg_region)-1)])
@@ -90,8 +90,9 @@ if __name__ == "__main__":
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
 
-    list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
-                            'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6']
+    # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
+    #                         'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6']
+    list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC039258_factor2.5_pixscale0.6']
 
     index = -1
     for name in tqdm(names, leave=True):
@@ -166,8 +167,6 @@ if __name__ == "__main__":
 
                 sga = Table.read(f'{PATH_DATA}/SGA-2020.fits', hdu=1)
                 residual, mask, z_redshift, pixel_to_kpc, PA = get_residuals_and_mask(PATH_DATA, sga, name)
-                if name == 'PGC938075_factor4.5_pixscale0.6':
-                    pixel_to_kpc *= 100
                 center_x, center_y = residual.shape[1]//2, residual.shape[0]//2
 
                 plt.figure(figsize=(12, 8))
