@@ -21,46 +21,40 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     is_data = False
     rng = np.random.default_rng(int(seed))
 
-    # MW halo parameters
-    params = np.zeros(ndim)
-    params[:2] = prior_transform(rng.uniform(0, 1, size=ndim))[:2] # logM and Rs
-
-    # Give get_q of approx 1
-    params[2] = 1.0   # dirx
-    params[3] = 1.0   # diry
-    params[4] = 0.605   # dirz
-    
-    disk_ratio = rng.uniform(1, 10)/100
-    disk_mass  = np.log10(disk_ratio*10**params[0]) 
-    disk_Rs    = rng.uniform(1, 5)
-    disk_Hs_ratio    = rng.uniform(0.05, 0.25)
-    disk_Hs = disk_Hs_ratio * disk_Rs
-    params_disk = [disk_mass, disk_Rs, disk_Hs]
+    disk_ratio    = rng.uniform(1, 10)/100
+    disk_Rs       = 3.5
+    disk_Hs       = 0.5
 
     while not is_data:
         # Resample parameters
         p = rng.uniform(0, 1, size=ndim)
-        params[5:] = prior_transform(p)[5:]
+        params = prior_transform(p)
 
+        # Give get_q of approx 1
+        params = params.at[2:5].set([1.0, 1.0, 0.605])  # dirx, diry, dirz
+
+        disk_mass  = np.log10(disk_ratio*10**params[0]) 
+        params_disk = [disk_mass, disk_Rs, disk_Hs]
         theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, params_disk)
         theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
         
-        theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36)
+        theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36+1)
         bin_width  = theta_bin[1] - theta_bin[0]
-        r_bin, _, count = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
+        r_bin, w_bin, count = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, theta_bin, bin_width)
 
         arg_take = jnp.where(count > min_count)[0]
         theta_in = theta_bin[arg_take]
         r_in     = r_bin[arg_take]
 
         crit1 = jnp.all(jnp.diff(arg_take) == 1) # Must be continuous and
-        crit2 = len(arg_take) > 10   # Must have at least 10 bins with more than 100 particles
-        crit3 = jnp.nansum(r_in[:-1]*jnp.tanh(jnp.diff(theta_in))) > 50 # Must have length of at least 100kpc
+        crit2 = len(arg_take) > 9   # Must have at least 10 bins with more than 100 particles
+        crit3 = jnp.nansum(r_in[:-1]*jnp.tanh(jnp.diff(theta_in))) > 100 # Must have length of at least 100kpc
         crit4 = jnp.min(r_stream) > 2  # Must be further than 2kpc minimum
-        crit5 = jnp.max(r_stream) < 200  # Must be less than 200kpc
+        crit5 = jnp.max(r_stream) < 500  # Must be less than 200kpc
         crit6 = jnp.all(jnp.diff(theta_sat) > 0)  # Must be monotonic
+        crit7 = jnp.all(w_bin<20)
 
-        if crit1 and crit2 and crit3 and crit4 and crit5 and crit6: 
+        if crit1 and crit2 and crit3 and crit4 and crit5 and crit6 and crit7: 
             is_data = True
 
     r_sig = r_in * sigma / 100
@@ -71,6 +65,9 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
         'bin_width': bin_width,
         'r': r_obs,
         'r_err': r_sig,
+        'x': r_in * jnp.cos(theta_in),
+        'y': r_in * jnp.sin(theta_in),
+        'w': w_bin,
         'count': count,
 
         'params': params,
