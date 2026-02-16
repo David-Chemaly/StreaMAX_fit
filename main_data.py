@@ -47,7 +47,7 @@ def extra_processing(name, dict_data):
             dict_data['r'] = dict_data['r'][final_indices]
             dict_data['r_err'] = dict_data['r_err'][final_indices]
         elif name == 'PGC000902_factor4.0_pixscale0.6':
-            arg_take = np.where((dict_data['theta'] > 8.5))[0]
+            arg_take = np.arange(len(dict_data['theta']))[16:]
             dict_data['theta'] = dict_data['theta'][arg_take]
             dict_data['r'] = dict_data['r'][arg_take]
             dict_data['r_err'] = dict_data['r_err'][arg_take]
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 3
     nlive = 2000
-    var_ratio = 9.0
+    var_ratio = 4.0
     n_particles_per_point = 2000
     n_particles_min = 10000
 
@@ -92,7 +92,9 @@ if __name__ == "__main__":
 
     # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
     #                         'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6']
-    list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC039258_factor2.5_pixscale0.6']
+    # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4', 'PGC938075_factor4.5_pixscale0.6']
+    list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6']
+
 
     index = -1
     for name in tqdm(names, leave=True):
@@ -154,6 +156,8 @@ if __name__ == "__main__":
                 best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
                 theta_stream, r_stream, xv_stream = params_to_stream(best_params, n_particles)
                 r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
+                if name == 'PGC938075_factor4.5_pixscale0.6':
+                    r_bin /= 100
                 x_bin = r_bin * np.cos(dict_data['theta'] + dict_data['delta_theta'])
                 y_bin = r_bin * np.sin(dict_data['theta'] + dict_data['delta_theta'])
 
