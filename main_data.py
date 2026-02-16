@@ -82,7 +82,7 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 3
     nlive = 2000
-    var_ratio = 4.0
+    var_ratio = 9.0
     n_particles_per_point = 2000
     n_particles_min = 10000
 
@@ -93,7 +93,8 @@ if __name__ == "__main__":
     # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
     #                         'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6']
     # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4', 'PGC938075_factor4.5_pixscale0.6']
-    list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6']
+    # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6']
+    list_undone_names = ['PGC000902_factor4.0_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6']
 
 
     index = -1
