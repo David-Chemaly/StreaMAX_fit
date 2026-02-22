@@ -206,42 +206,36 @@ if __name__ == "__main__":
         w = np.clip(np.array(pop_dist_fn(q, *theta)), 0, None)
         return (w.sum()**2) / (w**2).sum() if (w**2).sum() > 0 else 0.
 
-    ess_matrix  = np.array([[kish_ess(q, theta) for q in q_fits] for theta in thetas])
+    ess_matrix   = np.array([[kish_ess(q, theta) for q in q_fits] for theta in thetas])
     N_per_galaxy = np.array([len(q) for q in q_fits])
-    mean_N       = N_per_galaxy.mean()
+    pct_matrix   = ess_matrix / N_per_galaxy[np.newaxis, :] * 100  # ESS/N_i per galaxy
 
-    # x-limits for the log-scale bottom axis
-    pos_vals = ess_matrix[ess_matrix > 0]
-    x_lo = max(1, pos_vals.min() * 0.5) if len(pos_vals) else 1
-    x_hi = ess_matrix.max() * 3
-
-    n = len(names_used)
+    n       = len(names_used)
     bar_h   = 0.25
     offsets = np.array([-bar_h, 0, bar_h])
 
-    fig_ess, ax_bot = plt.subplots(figsize=(9, max(4, 0.45 * n)))
+    fig_ess, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(14, max(4, 0.45 * n)),
+                                          sharey=True)
 
     for k, (label, color, offset) in enumerate(zip(labels_pct, colors_pct, offsets)):
         ypos = np.arange(n) + offset
-        # clip to x_lo so zero-ESS bars still appear at the left edge
-        ax_bot.barh(ypos, np.clip(ess_matrix[k], x_lo, None), height=bar_h, color=color, label=label)
+        ax_l.barh(ypos, np.clip(ess_matrix[k], 1, None), height=bar_h, color=color, label=label)
+        ax_r.barh(ypos, pct_matrix[k],                   height=bar_h, color=color)
 
-    ax_bot.set_xscale('log')
-    ax_bot.set_xlim(x_lo, x_hi)
-    ax_bot.axvline(1000,          color='black',   lw=1.2, ls='--', label='ESS = 1000')
-    ax_bot.axvline(0.05 * mean_N, color='dimgray', lw=1.2, ls=':',  label=f'5%  (mean N = {mean_N:.0f})')
-    ax_bot.set_yticks(np.arange(n))
-    ax_bot.set_yticklabels(names_used, fontsize=10)
-    ax_bot.set_xlabel('Effective sample size  (log scale)')
-    ax_bot.set_title(f'Importance sampling ESS per stream ({args.filter})')
-    ax_bot.legend(fontsize=9)
+    # Left: raw ESS, log scale
+    ax_l.set_xscale('log')
+    ax_l.axvline(1000, color='black', lw=1.2, ls='--', label='ESS = 1000')
+    ax_l.set_xlabel('Effective sample size  (log scale)')
+    ax_l.set_yticks(np.arange(n))
+    ax_l.set_yticklabels(names_used, fontsize=10)
+    ax_l.legend(fontsize=9)
 
-    # Top axis: linear percentage scale, sharing the same figure space
-    ax_top = ax_bot.twiny()
-    ax_top.set_xscale('linear')
-    ax_top.set_xlim(x_lo / mean_N * 100, x_hi / mean_N * 100)
-    ax_top.set_xlabel('ESS / N  (%)')
+    # Right: ESS / N_i per galaxy, linear scale
+    ax_r.axvline(5, color='black', lw=1.2, ls='--', label='5%')
+    ax_r.set_xlabel('ESS / N  (%,  per galaxy)')
+    ax_r.legend(fontsize=9)
 
+    fig_ess.suptitle(f'Importance sampling ESS per stream ({args.filter})', y=1.01)
     fig_ess.tight_layout()
     fig_ess.savefig(os.path.join(PATH_DATA, f'ess_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
     plt.close(fig_ess)
