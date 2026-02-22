@@ -122,6 +122,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--filter', choices=['yes', 'both'], default='yes',
                         help='yes = Elisabeth==yes only; both = all streams')
+    parser.add_argument('--ess-only', action='store_true',
+                        help='skip the population fit and just produce the ESS plot')
     args = parser.parse_args()
 
     fit_dist = 'gaussian'
@@ -150,30 +152,43 @@ if __name__ == "__main__":
                 q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
                 names_used.append(name.split('_factor')[0])
 
-    print(f'[{args.filter}] Fitting population with {len(q_fits)} streams using a {fit_dist} distribution')
-    dns_results = dynesty_fit(q_fits, ndim=ndim, nlive=nlive, pop_type=fit_dist)
-    with open(os.path.join(PATH_DATA, f'dict_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pkl'), 'wb') as f:
-        pickle.dump(dns_results, f)
+    if not args.ess_only:
+        print(f'[{args.filter}] Fitting population with {len(q_fits)} streams using a {fit_dist} distribution')
+        dns_results = dynesty_fit(q_fits, ndim=ndim, nlive=nlive, pop_type=fit_dist)
+        with open(os.path.join(PATH_DATA, f'dict_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pkl'), 'wb') as f:
+            pickle.dump(dns_results, f)
 
-    figure = corner.corner(dns_results['samps'],
-            labels=[r'$\mu$', r'$\sigma$'],
-            color='blue',
-            quantiles=[0.16, 0.5, 0.84],
-            show_titles=True,
-            title_kwargs={"fontsize": 16},
-            truth_color='red')
+        figure = corner.corner(dns_results['samps'],
+                labels=[r'$\mu$', r'$\sigma$'],
+                color='blue',
+                quantiles=[0.16, 0.5, 0.84],
+                show_titles=True,
+                title_kwargs={"fontsize": 16},
+                truth_color='red')
 
-    # Mark the spherical case (mu=1) with a black vertical line
-    axes = np.array(figure.get_axes()).reshape(ndim, ndim)
-    axes[0, 0].axvline(1., color='black', lw=1.5)  # 1D mu histogram
-    axes[1, 0].axvline(1., color='black', lw=1.5)  # 2D contour panel
+        # Mark the spherical case (mu=1) with a black vertical line
+        axes = np.array(figure.get_axes()).reshape(ndim, ndim)
+        axes[0, 0].axvline(1., color='black', lw=1.5)  # 1D mu histogram
+        axes[1, 0].axvline(1., color='black', lw=1.5)  # 2D contour panel
 
-    figure.savefig(os.path.join(PATH_DATA, f'corner_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
-    plt.close(figure)
+        figure.savefig(os.path.join(PATH_DATA, f'corner_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
+        plt.close(figure)
 
     # --- Effective sample size diagnostic ---
-    # Kish ESS = (sum w)^2 / sum(w^2), evaluated at the posterior median theta
-    theta_med = np.median(dns_results['samps'], axis=0)
+    # Kish ESS = (sum w)^2 / sum(w^2), evaluated at the posterior median theta.
+    # If --ess-only, try to load a previous fit for theta; fall back to (mu=1, sigma=0.1).
+    if args.ess_only:
+        pop_pkl = os.path.join(PATH_DATA, f'dict_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pkl')
+        if os.path.exists(pop_pkl):
+            with open(pop_pkl, 'rb') as f:
+                dns_results = pickle.load(f)
+            theta_med = np.median(dns_results['samps'], axis=0)
+            print(f'ESS evaluated at median theta from existing fit: {theta_med}')
+        else:
+            theta_med = np.array([1.0, 0.1])
+            print(f'No existing fit found — ESS evaluated at default theta: {theta_med}')
+    else:
+        theta_med = np.median(dns_results['samps'], axis=0)
     if fit_dist == 'gaussian':
         pop_dist_fn = gaussian
     elif fit_dist == 'uniform':
