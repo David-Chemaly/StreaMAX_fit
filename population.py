@@ -175,20 +175,19 @@ if __name__ == "__main__":
         plt.close(figure)
 
     # --- Effective sample size diagnostic ---
-    # Kish ESS = (sum w)^2 / sum(w^2), evaluated at the posterior median theta.
-    # If --ess-only, try to load a previous fit for theta; fall back to (mu=1, sigma=0.1).
+    # Kish ESS = (sum w)^2 / sum(w^2), evaluated at the 16th, 50th and 84th
+    # percentile of each population parameter.
+    # If --ess-only, try to load a previous fit; fall back to (mu=1, sigma=0.1).
     if args.ess_only:
         pop_pkl = os.path.join(PATH_DATA, f'dict_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pkl')
         if os.path.exists(pop_pkl):
             with open(pop_pkl, 'rb') as f:
                 dns_results = pickle.load(f)
-            theta_med = np.median(dns_results['samps'], axis=0)
-            print(f'ESS evaluated at median theta from existing fit: {theta_med}')
+            print(f'ESS evaluated using existing fit: {pop_pkl}')
         else:
-            theta_med = np.array([1.0, 0.1])
-            print(f'No existing fit found — ESS evaluated at default theta: {theta_med}')
-    else:
-        theta_med = np.median(dns_results['samps'], axis=0)
+            dns_results = None
+            print('No existing fit found — ESS evaluated at default theta (mu=1, sigma=0.1)')
+
     if fit_dist == 'gaussian':
         pop_dist_fn = gaussian
     elif fit_dist == 'uniform':
@@ -196,22 +195,32 @@ if __name__ == "__main__":
     elif fit_dist == 'binomial':
         pop_dist_fn = binomial
 
-    ess_vals = []
-    for q in q_fits:
-        w   = np.array(pop_dist_fn(q, *theta_med))
-        w   = np.clip(w, 0, None)
-        ess = (w.sum()**2) / (w**2).sum() if (w**2).sum() > 0 else 0.
-        ess_vals.append(ess)
+    if dns_results is not None:
+        thetas = np.percentile(dns_results['samps'], [16, 50, 84], axis=0)
+    else:
+        thetas = np.tile([1.0, 0.1], (3, 1))
+    labels_pct = ['16th percentile', '50th percentile', '84th percentile']
+    colors_pct = ['#4393c3', '#2166ac', '#053061']
 
-    fig_ess, ax_ess = plt.subplots(figsize=(8, max(4, 0.4 * len(names_used))))
-    colors = ['tomato' if e < 50 else 'steelblue' for e in ess_vals]
-    ax_ess.barh(range(len(names_used)), ess_vals, color=colors)
+    def kish_ess(q, theta):
+        w = np.clip(np.array(pop_dist_fn(q, *theta)), 0, None)
+        return (w.sum()**2) / (w**2).sum() if (w**2).sum() > 0 else 0.
+
+    ess_matrix = np.array([[kish_ess(q, theta) for q in q_fits] for theta in thetas])
+
+    n = len(names_used)
+    bar_h = 0.25
+    offsets = np.array([-bar_h, 0, bar_h])
+    fig_ess, ax_ess = plt.subplots(figsize=(9, max(4, 0.45 * n)))
+    for k, (label, color, offset) in enumerate(zip(labels_pct, colors_pct, offsets)):
+        ypos = np.arange(n) + offset
+        ax_ess.barh(ypos, ess_matrix[k], height=bar_h, color=color, label=label)
     ax_ess.axvline(50, color='black', lw=1.2, ls='--', label='ESS = 50')
-    ax_ess.set_yticks(range(len(names_used)))
+    ax_ess.set_yticks(np.arange(n))
     ax_ess.set_yticklabels(names_used, fontsize=10)
     ax_ess.set_xlabel('Effective sample size')
     ax_ess.set_title(f'Importance sampling ESS per stream ({args.filter})')
-    ax_ess.legend()
+    ax_ess.legend(fontsize=9)
     fig_ess.tight_layout()
     fig_ess.savefig(os.path.join(PATH_DATA, f'ess_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
     plt.close(fig_ess)
