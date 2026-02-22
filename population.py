@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 import multiprocessing as mp
 import matplotlib.pyplot as plt
+import pandas as pd
 plt.rcParams.update({'font.size': 18})
 from scipy.stats import norm
 
@@ -122,30 +123,36 @@ if __name__ == "__main__":
     nlive = 500
 
     PATH_DATA = '/data/dc824-2/SGA_Streams/for_pop'
-    names = np.loadtxt(f'{PATH_DATA}/../names.txt', dtype=str)
+    STRINGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'STRRINGS.xlsx')
 
     rm_names = ['NGC5387_factor2.5_pixscale0.6', 'PGC021008_factor2.5_pixscale0.6']
 
-    q_fits = []
-    for name in names:
-        if name not in rm_names:
-            path_dict = f'{PATH_DATA}/{name}.pkl'
-            if os.path.exists(path_dict):
-                with open(path_dict, "rb") as f:
-                    dict_results = pickle.load(f)
-                q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
+    # Load STRRINGS.xlsx and build two name lists: yes-only and yes+no
+    df = pd.read_excel(STRINGS_PATH)
+    names_yes  = df[df['Elisabeth'] == 'yes']['Name'].tolist()
+    names_both = df['Name'].tolist()
 
-    print(f'Fitting population with {len(q_fits)} streams using a {fit_dist} distribution')
-    dict_results = dynesty_fit(q_fits, ndim=ndim, nlive=nlive, pop_type=fit_dist)
-    with open(os.path.join(PATH_DATA, f'dict_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}.pkl'), 'wb') as f:
-        pickle.dump(dict_results, f)
+    for label, names in [('yes', names_yes), ('both', names_both)]:
+        q_fits = []
+        for name in names:
+            if name not in rm_names:
+                path_dict = f'{PATH_DATA}/{name}.pkl'
+                if os.path.exists(path_dict):
+                    with open(path_dict, "rb") as f:
+                        dict_results = pickle.load(f)
+                    q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
 
-    # Plots the corner plots
-    figure = corner.corner(dict_results['samps'], 
-            color='blue',
-            quantiles=[0.16, 0.5, 0.84],
-            show_titles=True, 
-            title_kwargs={"fontsize": 16},
-            truth_color='red')
-    figure.savefig(os.path.join(PATH_DATA, f'corner_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}.pdf'), bbox_inches = 'tight', dpi = 300, transparent = True)
-    plt.close(figure)
+        print(f'[{label}] Fitting population with {len(q_fits)} streams using a {fit_dist} distribution')
+        dns_results = dynesty_fit(q_fits, ndim=ndim, nlive=nlive, pop_type=fit_dist)
+        with open(os.path.join(PATH_DATA, f'dict_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{label}.pkl'), 'wb') as f:
+            pickle.dump(dns_results, f)
+
+        # Plots the corner plots
+        figure = corner.corner(dns_results['samps'],
+                color='blue',
+                quantiles=[0.16, 0.5, 0.84],
+                show_titles=True,
+                title_kwargs={"fontsize": 16},
+                truth_color='red')
+        figure.savefig(os.path.join(PATH_DATA, f'corner_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{label}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
+        plt.close(figure)
