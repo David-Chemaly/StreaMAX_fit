@@ -154,10 +154,17 @@ if __name__ == "__main__":
         pickle.dump(dns_results, f)
 
     figure = corner.corner(dns_results['samps'],
+            labels=[r'$\mu$', r'$\sigma$'],
             color='blue',
             quantiles=[0.16, 0.5, 0.84],
             show_titles=True,
             title_kwargs={"fontsize": 16},
             truth_color='red')
+
+    # Mark the spherical case (mu=1) with a black vertical line
+    axes = np.array(figure.get_axes()).reshape(ndim, ndim)
+    axes[0, 0].axvline(1., color='black', lw=1.5)  # 1D mu histogram
+    axes[1, 0].axvline(1., color='black', lw=1.5)  # 2D contour panel
+
     figure.savefig(os.path.join(PATH_DATA, f'corner_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
     plt.close(figure)
