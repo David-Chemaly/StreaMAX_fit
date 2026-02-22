@@ -203,8 +203,10 @@ if __name__ == "__main__":
     colors_pct = ['#4393c3', '#2166ac', '#053061']
 
     def kish_ess(q, theta):
-        w = np.clip(np.array(pop_dist_fn(q, *theta)), 0, None)
-        return (w.sum()**2) / (w**2).sum() if (w**2).sum() > 0 else 0.
+        w   = np.clip(np.array(pop_dist_fn(q, *theta)), 0, None)
+        N   = len(w)
+        ess = (w.sum()**2) / (w**2).sum() if (w**2).sum() > 0 else 0.
+        return ess / N  # normalised: 0 (worst) → 1 (all samples equally useful)
 
     ess_matrix = np.array([[kish_ess(q, theta) for q in q_fits] for theta in thetas])
 
@@ -215,10 +217,11 @@ if __name__ == "__main__":
     for k, (label, color, offset) in enumerate(zip(labels_pct, colors_pct, offsets)):
         ypos = np.arange(n) + offset
         ax_ess.barh(ypos, ess_matrix[k], height=bar_h, color=color, label=label)
-    ax_ess.axvline(50, color='black', lw=1.2, ls='--', label='ESS = 50')
+    ax_ess.axvline(0.1, color='black', lw=1.2, ls='--', label='ESS/N = 0.1')
+    ax_ess.set_xlim(0, 1)
     ax_ess.set_yticks(np.arange(n))
     ax_ess.set_yticklabels(names_used, fontsize=10)
-    ax_ess.set_xlabel('Effective sample size')
+    ax_ess.set_xlabel('Normalised effective sample size  (ESS / N)')
     ax_ess.set_title(f'Importance sampling ESS per stream ({args.filter})')
     ax_ess.legend(fontsize=9)
     fig_ess.tight_layout()
