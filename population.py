@@ -125,7 +125,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     fit_dist = 'gaussian'
-    ndim = 2
+    ndim  = 2
     nlive = 500
 
     PATH_DATA = '/data/dc824-2/SGA_Streams/for_pop'
@@ -139,7 +139,8 @@ if __name__ == "__main__":
     else:
         names = df['Name'].tolist()
 
-    q_fits = []
+    q_fits     = []
+    names_used = []
     for name in names:
         if name not in rm_names:
             path_dict = f'{PATH_DATA}/{name}.pkl'
@@ -147,6 +148,7 @@ if __name__ == "__main__":
                 with open(path_dict, "rb") as f:
                     dict_results = pickle.load(f)
                 q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
+                names_used.append(name.split('_factor')[0])
 
     print(f'[{args.filter}] Fitting population with {len(q_fits)} streams using a {fit_dist} distribution')
     dns_results = dynesty_fit(q_fits, ndim=ndim, nlive=nlive, pop_type=fit_dist)
@@ -168,3 +170,33 @@ if __name__ == "__main__":
 
     figure.savefig(os.path.join(PATH_DATA, f'corner_pop_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
     plt.close(figure)
+
+    # --- Effective sample size diagnostic ---
+    # Kish ESS = (sum w)^2 / sum(w^2), evaluated at the posterior median theta
+    theta_med = np.median(dns_results['samps'], axis=0)
+    if fit_dist == 'gaussian':
+        pop_dist_fn = gaussian
+    elif fit_dist == 'uniform':
+        pop_dist_fn = uniform
+    elif fit_dist == 'binomial':
+        pop_dist_fn = binomial
+
+    ess_vals = []
+    for q in q_fits:
+        w   = np.array(pop_dist_fn(q, *theta_med))
+        w   = np.clip(w, 0, None)
+        ess = (w.sum()**2) / (w**2).sum() if (w**2).sum() > 0 else 0.
+        ess_vals.append(ess)
+
+    fig_ess, ax_ess = plt.subplots(figsize=(8, max(4, 0.4 * len(names_used))))
+    colors = ['tomato' if e < 50 else 'steelblue' for e in ess_vals]
+    ax_ess.barh(range(len(names_used)), ess_vals, color=colors)
+    ax_ess.axvline(50, color='black', lw=1.2, ls='--', label='ESS = 50')
+    ax_ess.set_yticks(range(len(names_used)))
+    ax_ess.set_yticklabels(names_used, fontsize=10)
+    ax_ess.set_xlabel('Effective sample size')
+    ax_ess.set_title(f'Importance sampling ESS per stream ({args.filter})')
+    ax_ess.legend()
+    fig_ess.tight_layout()
+    fig_ess.savefig(os.path.join(PATH_DATA, f'ess_{fit_dist}_nlive{nlive}_N{len(q_fits)}_{args.filter}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
+    plt.close(fig_ess)
