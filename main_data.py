@@ -82,8 +82,8 @@ if __name__ == "__main__":
     ndim  = 14
     n_min = 3
     nlive = 2000
-    var_ratio = 9.0
-    n_particles_per_point = 2000
+    var_ratio = 4.0
+    n_particles_per_point = 1500
     n_particles_min = 10000
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
@@ -159,6 +159,7 @@ if __name__ == "__main__":
                 r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
                 if name == 'PGC938075_factor4.5_pixscale0.6':
                     r_bin /= 100
+                    xv_stream /= 100
                 x_bin = r_bin * np.cos(dict_data['theta'] + dict_data['delta_theta'])
                 y_bin = r_bin * np.sin(dict_data['theta'] + dict_data['delta_theta'])
 
