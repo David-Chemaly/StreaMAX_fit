@@ -120,8 +120,10 @@ def dynesty_fit(dict_data, ndim=2, nlive=500, pop_type='uniform'):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filter', choices=['yes', 'both'], default='yes',
-                        help='yes = Elisabeth==yes only; both = all streams')
+    parser.add_argument('--filter', choices=['best', 'yes', 'both'], default='best',
+                        help='best = Elisabeth==best only; '
+                             'yes  = best + yes; '
+                             'both = all streams')
     parser.add_argument('--ess-only', action='store_true',
                         help='skip the population fit and just produce the ESS plot')
     args = parser.parse_args()
@@ -136,9 +138,11 @@ if __name__ == "__main__":
     rm_names = ['NGC5387_factor2.5_pixscale0.6', 'PGC021008_factor2.5_pixscale0.6', 'PGC430221_factor4.0_pixscale0.6']
 
     df = pd.read_excel(STRINGS_PATH)
-    if args.filter == 'yes':
-        names = df[df['Elisabeth'] == 'yes']['Name'].tolist()
-    else:
+    if args.filter == 'best':
+        names = df[df['Elisabeth'] == 'best']['Name'].tolist()
+    elif args.filter == 'yes':
+        names = df[df['Elisabeth'].isin(['best', 'yes'])]['Name'].tolist()
+    else:  # both
         names = df['Name'].tolist()
 
     q_fits     = []
