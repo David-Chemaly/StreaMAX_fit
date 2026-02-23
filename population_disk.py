@@ -112,20 +112,22 @@ if __name__ == "__main__":
     mean_r_list = np.array(mean_r_list)
     M_enc_list = np.array(M_enc_list)
 
-    q_all_big = []
+    q_all_big = {}
 
     q_fits = []
     for i in np.argsort(M_ratio_list)[:25]:
         q_fits.append(q_all[i])
-    q_all_big.append(q_fits)
+    q_all_big[0] = q_fits
 
+    q_fits = []
     for i in np.argsort(M_ratio_list)[25:50]:
         q_fits.append(q_all[i])
-    q_all_big.append(q_fits)
+    q_all_big[1] = q_fits
 
+    q_fits = []
     for i in np.argsort(M_ratio_list)[50:]:
         q_fits.append(q_all[i])
-    q_all_big.append(q_fits)
+    q_all_big[2] = q_fits
 
 
     for i in range(3):
