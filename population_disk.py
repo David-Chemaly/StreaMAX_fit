@@ -129,10 +129,12 @@ if __name__ == "__main__":
         q_fits.append(q_all[i])
     q_all_big[2] = q_fits
 
+    nlive = 500
+    ndim  = 2
 
     for i in range(3):
         print(f'[{i}] Fitting population with {len(q_all_big[i])} streams using a gaussian distribution')
-        dns_results = dynesty_fit(q_all_big[i], ndim=2, nlive=500, pop_type='gaussian')
+        dns_results = dynesty_fit(q_all_big[i], ndim=ndim, nlive=nlive, pop_type='gaussian')
         with open(os.path.join(PATH_DATA, f'dict_pop_disk_nlive{nlive}_N{len(q_all_big[i])}_{i}.pkl'), 'wb') as f:
             pickle.dump(dns_results, f)
 
@@ -149,5 +151,5 @@ if __name__ == "__main__":
         axes[0, 0].axvline(1., color='red', linestyle='--', lw=1.5)  # 1D mu histogram
         axes[1, 0].axvline(1., color='red', linestyle='--', lw=1.5)  # 2D contour panel
 
-        figure.savefig(os.path.join(PATH_DATA, f'corner_pop_nlive{nlive}_N{len(q_fits)}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
+        figure.savefig(os.path.join(PATH_DATA, f'corner_pop_nlive{nlive}_N{len(q_all_big[i])}_{i}.pdf'), bbox_inches='tight', dpi=300, transparent=True)
         plt.close(figure)
