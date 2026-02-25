@@ -145,8 +145,14 @@ if __name__ == "__main__":
         names = df[df['Elisabeth'].isin(['best', 'yes'])]['Name'].tolist()
     elif args.filter == 'both':  # both
         names = df['Name'].tolist()
-    elif args.filter == '70':
-        names = df[df['sigma_ratio'] <= 70]['Name'].tolist()
+    elif args.filter == '<70':
+        names = df[df['sigma_ratio'] < 70]['Name'].tolist()
+    elif args.filter == '>70':
+        names = df[df['sigma_ratio'] > 70]['Name'].tolist()
+    elif args.filter == '<80':
+        names = df[df['sigma_ratio'] < 80]['Name'].tolist()
+    elif args.filter == '>80':
+        names = df[df['sigma_ratio'] > 80]['Name'].tolist()
 
     q_fits     = []
     names_used = []
