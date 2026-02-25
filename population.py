@@ -120,7 +120,7 @@ def dynesty_fit(dict_data, ndim=2, nlive=500, pop_type='uniform'):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filter', choices=['best', 'yes', 'both', '70'], default='best',
+    parser.add_argument('--filter', choices=['best', 'yes', 'both', '>70', '<70', '>80', '<80'], default='best',
                         help='best = Elisabeth==best only; '
                              'yes  = best + yes; '
                              'both = all streams'
