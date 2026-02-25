@@ -146,7 +146,7 @@ if __name__ == "__main__":
     elif args.filter == 'both':  # both
         names = df['Name'].tolist()
     elif args.filter == '70':
-        names = df[df['sigma_ratio'] <= 70]['Name'].tolist()
+        names = df[int(df['sigma_ratio']) <= 70]['Name'].tolist()
 
     q_fits     = []
     names_used = []
