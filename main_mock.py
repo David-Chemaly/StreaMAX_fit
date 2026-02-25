@@ -125,7 +125,7 @@ if __name__ == "__main__":
     sigma = 2
 
     for seed in tqdm(seeds, leave=True):
-        path = f'/data/dc824-2/MockStreamsDisk/seed{seed}'
+        path = f'/data/dc824-2/MockStreamsDiskEdgeOn/seed{seed}'
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)

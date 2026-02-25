@@ -120,10 +120,11 @@ def dynesty_fit(dict_data, ndim=2, nlive=500, pop_type='uniform'):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filter', choices=['best', 'yes', 'both'], default='best',
+    parser.add_argument('--filter', choices=['best', 'yes', 'both', '70'], default='best',
                         help='best = Elisabeth==best only; '
                              'yes  = best + yes; '
-                             'both = all streams')
+                             'both = all streams'
+                             '70  = sigma ratio<=70; ')
     parser.add_argument('--ess-only', action='store_true',
                         help='skip the population fit and just produce the ESS plot')
     args = parser.parse_args()
@@ -142,8 +143,10 @@ if __name__ == "__main__":
         names = df[df['Elisabeth'] == 'best']['Name'].tolist()
     elif args.filter == 'yes':
         names = df[df['Elisabeth'].isin(['best', 'yes'])]['Name'].tolist()
-    else:  # both
+    elif args.filter == 'both':  # both
         names = df['Name'].tolist()
+    elif args.filter == '70':
+        names = df[df['sigma_ratio'] <= 70]['Name'].tolist()
 
     q_fits     = []
     names_used = []
@@ -218,8 +221,7 @@ if __name__ == "__main__":
     bar_h   = 0.25
     offsets = np.array([-bar_h, 0, bar_h])
 
-    fig_ess, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(14, max(4, 0.45 * n)),
-                                          sharey=True)
+    fig_ess, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(14, max(4, 0.45 * n)), sharey=True)
 
     for k, (label, color, offset) in enumerate(zip(labels_pct, colors_pct, offsets)):
         ypos = np.arange(n) + offset

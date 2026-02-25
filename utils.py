@@ -79,7 +79,7 @@ def params_to_stream_DiskNFW(params, params_disk, n_particles=10000, n_steps=99,
 
                 # MW disk
                 'MN_params': {'logM': params_disk[0], 'Rs': params_disk[1], 'Hs': params_disk[2],
-                                'dirx': 0.0, 'diry': 0.0, 'dirz': 1.0,
+                                'dirx': 0.0, 'diry': 1.0, 'dirz': 0.0,
                                 'x_origin': 0.0, 'y_origin': 0.0, 'z_origin': 0.0},
                 }
 
