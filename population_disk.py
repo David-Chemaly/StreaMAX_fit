@@ -57,8 +57,8 @@ if __name__ == "__main__":
     df = pd.read_excel(f'STRRINGS.xlsx')
 
 
-    PATH_DATA = f'/data/dc824-2/MockStreamsDisk'
-    N = 90
+    PATH_DATA = f'/data/dc824-2/MockStreamsDiskEdgeOn'
+    N = 40
 
     MSE_list = []
     MAE_list = []
@@ -119,20 +119,20 @@ if __name__ == "__main__":
         q_fits.append(q_all[i])
     q_all_big[0] = q_fits
 
-    q_fits = []
-    for i in np.argsort(M_ratio_list)[25:50]:
-        q_fits.append(q_all[i])
-    q_all_big[1] = q_fits
+    # q_fits = []
+    # for i in np.argsort(M_ratio_list)[25:50]:
+    #     q_fits.append(q_all[i])
+    # q_all_big[1] = q_fits
 
-    q_fits = []
-    for i in np.argsort(M_ratio_list)[50:]:
-        q_fits.append(q_all[i])
-    q_all_big[2] = q_fits
+    # q_fits = []
+    # for i in np.argsort(M_ratio_list)[50:]:
+    #     q_fits.append(q_all[i])
+    # q_all_big[2] = q_fits
 
     nlive = 500
     ndim  = 2
 
-    for i in range(3):
+    for i in range(len(q_all_big)):
         print(f'[{i}] Fitting population with {len(q_all_big[i])} streams using a gaussian distribution')
         dns_results = dynesty_fit(q_all_big[i], ndim=ndim, nlive=nlive, pop_type='gaussian')
         with open(os.path.join(PATH_DATA, f'dict_pop_disk_nlive{nlive}_N{len(q_all_big[i])}_{i}.pkl'), 'wb') as f:
