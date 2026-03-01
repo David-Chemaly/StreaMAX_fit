@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
 
     PATH_DATA = f'/data/dc824-2/MockStreamsDiskEdgeOn'
-    N = 40
+    N = 80
 
     MSE_list = []
     MAE_list = []
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     q_all_big = {}
 
     q_fits = []
-    for i in np.argsort(M_ratio_list)[:25]:
+    for i in np.argsort(M_ratio_list):
         q_fits.append(q_all[i])
     q_all_big[0] = q_fits
 

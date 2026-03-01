@@ -136,8 +136,6 @@ if __name__ == "__main__":
     PATH_DATA = '/data/dc824-2/SGA_Streams/for_pop'
     STRINGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'STRRINGS.xlsx')
 
-    rm_names = ['NGC5387_factor2.5_pixscale0.6', 'PGC021008_factor2.5_pixscale0.6', 'PGC430221_factor4.0_pixscale0.6']
-
     df = pd.read_excel(STRINGS_PATH)
     if args.filter == 'best':
         names = df[df['Elisabeth'] == 'best']['Name'].tolist()
@@ -157,13 +155,12 @@ if __name__ == "__main__":
     q_fits     = []
     names_used = []
     for name in names:
-        if name not in rm_names:
-            path_dict = f'{PATH_DATA}/{name}.pkl'
-            if os.path.exists(path_dict):
-                with open(path_dict, "rb") as f:
-                    dict_results = pickle.load(f)
-                q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
-                names_used.append(name.split('_factor')[0])
+        path_dict = f'{PATH_DATA}/{name}.pkl'
+        if os.path.exists(path_dict):
+            with open(path_dict, "rb") as f:
+                dict_results = pickle.load(f)
+            q_fits.append(get_q(*dict_results['samps'][:, 2:5].T))
+            names_used.append(name.split('_factor')[0])
 
     if not args.ess_only:
         print(f'[{args.filter}] Fitting population with {len(q_fits)} streams using a {fit_dist} distribution')
