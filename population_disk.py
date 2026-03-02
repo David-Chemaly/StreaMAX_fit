@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
 
     PATH_DATA = f'/data/dc824-2/MockStreamsDiskEdgeOn'
-    N = 80
+    N = 100
 
     MSE_list = []
     MAE_list = []
@@ -115,19 +115,19 @@ if __name__ == "__main__":
     q_all_big = {}
 
     q_fits = []
-    for i in np.argsort(M_ratio_list):
+    for i in np.argsort(M_ratio_list)[:24]:
         q_fits.append(q_all[i])
     q_all_big[0] = q_fits
 
-    # q_fits = []
-    # for i in np.argsort(M_ratio_list)[25:50]:
-    #     q_fits.append(q_all[i])
-    # q_all_big[1] = q_fits
+    q_fits = []
+    for i in np.argsort(M_ratio_list)[24:48]:
+        q_fits.append(q_all[i])
+    q_all_big[1] = q_fits
 
-    # q_fits = []
-    # for i in np.argsort(M_ratio_list)[50:]:
-    #     q_fits.append(q_all[i])
-    # q_all_big[2] = q_fits
+    q_fits = []
+    for i in np.argsort(M_ratio_list)[48:]:
+        q_fits.append(q_all[i])
+    q_all_big[2] = q_fits
 
     nlive = 500
     ndim  = 2
