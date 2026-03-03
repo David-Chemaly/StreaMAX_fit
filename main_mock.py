@@ -130,7 +130,7 @@ if __name__ == "__main__":
     for _ in range(2):
         if _ == 0:
             print('Starting with edge on')
-            params_disk = [0.5, 3.5, 0.5] + [0., 1., 0.] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
+            params_disk = [0.05, 3.5, 0.5] + [0., 1., 0.] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
             path_base = f'/data/dc824-2/MockStreamsDiskEdgeOn50'
         else:
             print('Starting with face on')
