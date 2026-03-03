@@ -17,16 +17,13 @@ from prior import *
 from llikelihood import *
 from fit import *
 
-def get_mock_data_stream(seed, params_disk, sigma=2, ndim=14, min_count=100):
+def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     is_data = False
     rng = np.random.default_rng(int(seed))
-    disk_ratio = float(params_disk[0])
-    disk_shape = list(params_disk[1:])
 
-    # disk_ratio     = 0.5 #rng.uniform(1, 10)/100
-    # disk_Rs        = 3.5
-    # disk_Hs        = 0.5
-    # oritation_disk = [0,1,0]
+    disk_ratio    = rng.uniform(1, 10)/100
+    disk_Rs       = 3.5
+    disk_Hs       = 0.5
 
     while not is_data:
         # Resample parameters
@@ -36,9 +33,9 @@ def get_mock_data_stream(seed, params_disk, sigma=2, ndim=14, min_count=100):
         # Give get_q of approx 1
         params = params.at[2:5].set([1.0, 1.0, 0.605])  # dirx, diry, dirz
 
-        disk_mass = np.log10(disk_ratio * 10**params[0])
-        params_disk_trial = [disk_mass] + disk_shape
-        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, params_disk_trial)
+        disk_mass  = np.log10(disk_ratio*10**params[0]) 
+        params_disk = [disk_mass, disk_Rs, disk_Hs]
+        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, params_disk)
         theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
         
         theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36+1)
@@ -74,7 +71,7 @@ def get_mock_data_stream(seed, params_disk, sigma=2, ndim=14, min_count=100):
         'count': count,
 
         'params': params,
-        'params_disk': params_disk_trial,
+        'params_disk': params_disk,
         'theta_stream': theta_stream,
         'r_stream': r_stream,
         'x_stream': r_stream * jnp.cos(theta_stream),
@@ -91,7 +88,7 @@ def plot_mock_data_stream(path, dict_stream):
     plt.subplot(1, 2, 1)
     plt.plot(dict_stream['r']*np.cos(dict_stream['theta']), dict_stream['r']*np.sin(dict_stream['theta']), '-o', c='black')
     
-    params_disk = list(dict_stream['params_disk'])
+    params_disk = dict_stream['params_disk']
     params_disk[0] = 0.0 # Set disk mass to 0 for plotting the stream without disk
     theta_stream, r_stream, _, _ = params_to_stream_DiskNFW(dict_stream['params'], params_disk)
     r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_stream['theta'], dict_stream['bin_width'])
@@ -116,7 +113,7 @@ def plot_mock_data_stream(path, dict_stream):
     plt.close()
 
 if __name__ == "__main__":
-    N = 25
+    N = 100
     seeds = np.arange(N)+1
 
     ndim  = 14
@@ -127,79 +124,69 @@ if __name__ == "__main__":
 
     sigma = 2
 
-    for _ in range(2):
-        if _ == 0:
-            print('Starting with edge on')
-            params_disk = [0.05, 3.5, 0.5] + [0., 1., 0.] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
-            path_base = f'/data/dc824-2/MockStreamsDiskEdgeOn50'
-        else:
-            print('Starting with face on')
-            params_disk = [0.5, 3.5, 0.5] + [0., 0., 1.] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
-            path_base = f'/data/dc824-2/MockStreamsDiskFaceOn50'
+    for seed in tqdm(seeds, leave=True):
+        path = f'/data/dc824-2/MockStreamsDiskEdgeOn/seed{seed}'
 
-        for seed in tqdm(seeds, leave=True):
-            path = f'{path_base}/seed{seed}'
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
 
-            if not os.path.exists(path):
-                os.makedirs(path, exist_ok=True)
+            # Generate mock data
+            dict_data = get_mock_data_stream(seed, sigma, ndim, min_count=100)
 
-                # Generate mock data
-                dict_data = get_mock_data_stream(seed, params_disk, sigma, ndim, min_count=100)
+            with open(os.path.join(path, 'dict_stream.pkl'), 'wb') as f:
+                pickle.dump(dict_data, f)
 
-                with open(os.path.join(path, 'dict_stream.pkl'), 'wb') as f:
-                    pickle.dump(dict_data, f)
+            # Plot mock data stream
+            plot_mock_data_stream(path, dict_data)
 
-                # Plot mock data stream
-                plot_mock_data_stream(path, dict_data)
+            # Fit the mock data
+            print(f'Fitting {seed} with nlive={nlive}')
+            dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, nlive=nlive)
+            with open(f'{path}/dict_results.pkl', 'wb') as f:
+                pickle.dump(dict_results, f)
 
-                # Fit the mock data
-                print(f'Fitting {seed} with nlive={nlive}')
-                dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, nlive=nlive)
-                with open(f'{path}/dict_results.pkl', 'wb') as f:
-                    pickle.dump(dict_results, f)
+            # Plot and Save corner plot
+            labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
+            figure = corner.corner(dict_results['samps'], 
+                        labels=labels,
+                        color='blue',
+                        quantiles=[0.16, 0.5, 0.84],
+                        show_titles=True, 
+                        title_kwargs={"fontsize": 16},
+                        truths=[dict_data['params'][0], dict_data['params'][1], dict_data['params'][2], dict_data['params'][3], dict_data['params'][4],
+                                np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        truth_color='red',
+                        )
+            figure.savefig(f'{path}/corner_plot.pdf')
+            plt.close(figure)
 
-                # Plot and Save corner plot
-                labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
-                figure = corner.corner(dict_results['samps'], 
-                            labels=labels,
-                            color='blue',
-                            quantiles=[0.16, 0.5, 0.84],
-                            show_titles=True, 
-                            title_kwargs={"fontsize": 16},
-                            truths=[dict_data['params'][0], dict_data['params'][1], dict_data['params'][2], dict_data['params'][3], dict_data['params'][4],
-                                    np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
-                            truth_color='red',
-                            )
-                figure.savefig(f'{path}/corner_plot.pdf')
-                plt.close(figure)
+            # Plot and Save Best fit on Data
+            best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
+            theta_stream, r_stream, xv_stream = params_to_stream(best_params, n_particles)
+            r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
+            x_bin = r_bin * np.cos(dict_data['theta'])
+            y_bin = r_bin * np.sin(dict_data['theta'])
 
-                # Plot and Save Best fit on Data
-                best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
-                theta_stream, r_stream, xv_stream = params_to_stream(best_params, n_particles)
-                r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
-                x_bin = r_bin * np.cos(dict_data['theta'])
-                y_bin = r_bin * np.sin(dict_data['theta'])
+            plt.figure(figsize=(14, 8))
+            plt.subplot(1, 2, 1)
+            plt.scatter(xv_stream[:, 0], xv_stream[:, 1], c='blue', s=1, label='Best fit')
+            plt.scatter(x_bin, y_bin, color='red', s=20, label='Data')
+            plt.xlabel('X (kpc)')
+            plt.ylabel('Y (kpc)')
+            plt.axis('equal')
+            plt.legend()
 
-                plt.figure(figsize=(14, 8))
-                plt.subplot(1, 2, 1)
-                plt.scatter(xv_stream[:, 0], xv_stream[:, 1], c='blue', s=1, label='Best fit')
-                plt.scatter(x_bin, y_bin, color='red', s=20, label='Data')
-                plt.xlabel('X (kpc)')
-                plt.ylabel('Y (kpc)')
-                plt.axis('equal')
-                plt.legend()
+            plt.subplot(1, 2, 2)
+            q_samps = get_q(dict_results['samps'][:, 2], dict_results['samps'][:, 3], dict_results['samps'][:, 4])
+            plt.hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
+            plt.axvline(np.median(q_samps), color='blue', linestyle='--', lw=2)
+            plt.axvline(np.percentile(q_samps, 16), color='blue', linestyle=':', lw=2)
+            plt.axvline(np.percentile(q_samps, 84), color='blue', linestyle=':', lw=2)
+            plt.axvline(get_q(dict_data['params'][2], dict_data['params'][3], dict_data['params'][4]), color='red', linestyle='-', lw=2)
+            plt.xlabel('Halo Flattening')
+            plt.xlim(0.5, 1.5)
+            plt.yticks([])
 
-                plt.subplot(1, 2, 2)
-                q_samps = get_q(dict_results['samps'][:, 2], dict_results['samps'][:, 3], dict_results['samps'][:, 4])
-                plt.hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
-                plt.axvline(np.median(q_samps), color='blue', linestyle='--', lw=2)
-                plt.axvline(np.percentile(q_samps, 16), color='blue', linestyle=':', lw=2)
-                plt.axvline(np.percentile(q_samps, 84), color='blue', linestyle=':', lw=2)
-                plt.axvline(get_q(dict_data['params'][2], dict_data['params'][3], dict_data['params'][4]), color='red', linestyle='-', lw=2)
-                plt.xlabel('Halo Flattening')
-                plt.xlim(0.5, 1.5)
-                plt.yticks([])
-
-                plt.tight_layout()
-                plt.savefig(f'{path}/best_fit.pdf')
-                plt.close()
+            plt.tight_layout()
+            plt.savefig(f'{path}/best_fit.pdf')
+            plt.close()
