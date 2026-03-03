@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
 
     PATH_DATA = f'/data/dc824-2/MockStreamsDiskEdgeOn'
-    N = 100
+    N = 25
 
     MSE_list = []
     MAE_list = []
