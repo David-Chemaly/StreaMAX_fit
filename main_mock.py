@@ -34,7 +34,7 @@ def get_mock_data_stream(seed, params_disk, sigma=2, ndim=14, min_count=100):
         # Give get_q of approx 1
         params = params.at[2:5].set([1.0, 1.0, 0.605])  # dirx, diry, dirz
 
-        disk_mass  = np.log10(params_disk[0]) 
+        disk_mass  = np.log10(params_disk[0]*10**params[0]) 
         params_disk = [disk_mass, params_disk[1], params_disk[2]] + params_disk[3:]
         theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, params_disk)
         theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
@@ -128,11 +128,11 @@ if __name__ == "__main__":
     for _ in range(2):
         if _ == 0:
             print('Starting with edge on')
-            params_dik = [0.5, 3.5, 0.5] + [0,1,0] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
+            params_disk = [0.5, 3.5, 0.5] + [0,1,0] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
             path_base = f'/data/dc824-2/MockStreamsDiskEdgeOn50'
         else:
             print('Starting with face on')
-            params_dik = [0.5, 3.5, 0.5] + [0,0,1] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
+            params_disk = [0.5, 3.5, 0.5] + [0,0,1] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
             path_base = f'/data/dc824-2/MockStreamsDiskFaceOn50'
 
         for seed in tqdm(seeds, leave=True):
@@ -142,7 +142,7 @@ if __name__ == "__main__":
                 os.makedirs(path, exist_ok=True)
 
                 # Generate mock data
-                dict_data = get_mock_data_stream(seed, params_dik, sigma, ndim, min_count=100)
+                dict_data = get_mock_data_stream(seed, params_disk, sigma, ndim, min_count=100)
 
                 with open(os.path.join(path, 'dict_stream.pkl'), 'wb') as f:
                     pickle.dump(dict_data, f)
