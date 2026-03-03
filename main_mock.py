@@ -20,6 +20,8 @@ from fit import *
 def get_mock_data_stream(seed, params_disk, sigma=2, ndim=14, min_count=100):
     is_data = False
     rng = np.random.default_rng(int(seed))
+    disk_ratio = float(params_disk[0])
+    disk_shape = list(params_disk[1:])
 
     # disk_ratio     = 0.5 #rng.uniform(1, 10)/100
     # disk_Rs        = 3.5
@@ -34,9 +36,9 @@ def get_mock_data_stream(seed, params_disk, sigma=2, ndim=14, min_count=100):
         # Give get_q of approx 1
         params = params.at[2:5].set([1.0, 1.0, 0.605])  # dirx, diry, dirz
 
-        disk_mass  = np.log10(params_disk[0]*10**params[0]) 
-        params_disk = [disk_mass, params_disk[1], params_disk[2]] + params_disk[3:]
-        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, params_disk)
+        disk_mass = np.log10(disk_ratio * 10**params[0])
+        params_disk_trial = [disk_mass] + disk_shape
+        theta_stream, r_stream, _, xv_sat = params_to_stream_DiskNFW(params, params_disk_trial)
         theta_sat = jnp.unwrap(jnp.arctan2(xv_sat[:, 1], xv_sat[:, 0]))
         
         theta_bin = np.linspace(-2*np.pi, 2*np.pi, 36+1)
@@ -72,7 +74,7 @@ def get_mock_data_stream(seed, params_disk, sigma=2, ndim=14, min_count=100):
         'count': count,
 
         'params': params,
-        'params_disk': params_disk,
+        'params_disk': params_disk_trial,
         'theta_stream': theta_stream,
         'r_stream': r_stream,
         'x_stream': r_stream * jnp.cos(theta_stream),
@@ -89,7 +91,7 @@ def plot_mock_data_stream(path, dict_stream):
     plt.subplot(1, 2, 1)
     plt.plot(dict_stream['r']*np.cos(dict_stream['theta']), dict_stream['r']*np.sin(dict_stream['theta']), '-o', c='black')
     
-    params_disk = dict_stream['params_disk']
+    params_disk = list(dict_stream['params_disk'])
     params_disk[0] = 0.0 # Set disk mass to 0 for plotting the stream without disk
     theta_stream, r_stream, _, _ = params_to_stream_DiskNFW(dict_stream['params'], params_disk)
     r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_stream['theta'], dict_stream['bin_width'])
@@ -128,11 +130,11 @@ if __name__ == "__main__":
     for _ in range(2):
         if _ == 0:
             print('Starting with edge on')
-            params_disk = [0.5, 3.5, 0.5] + [0,1,0] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
+            params_disk = [0.5, 3.5, 0.5] + [0., 1., 0.] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
             path_base = f'/data/dc824-2/MockStreamsDiskEdgeOn50'
         else:
             print('Starting with face on')
-            params_disk = [0.5, 3.5, 0.5] + [0,0,1] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
+            params_disk = [0.5, 3.5, 0.5] + [0., 0., 1.] # disk_ratio, disk_Rs, disk_Hs, dirx, diry, dirz
             path_base = f'/data/dc824-2/MockStreamsDiskFaceOn50'
 
         for seed in tqdm(seeds, leave=True):
