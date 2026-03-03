@@ -21,7 +21,7 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     is_data = False
     rng = np.random.default_rng(int(seed))
 
-    disk_ratio    = rng.uniform(1, 10)/100
+    disk_ratio    = 0.5
     disk_Rs       = 3.5
     disk_Hs       = 0.5
 
@@ -113,7 +113,7 @@ def plot_mock_data_stream(path, dict_stream):
     plt.close()
 
 if __name__ == "__main__":
-    N = 100
+    N = 25
     seeds = np.arange(N)+1
 
     ndim  = 14
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     sigma = 2
 
     for seed in tqdm(seeds, leave=True):
-        path = f'/data/dc824-2/MockStreamsDiskEdgeOn/seed{seed}'
+        path = f'/data/dc824-2/MockStreamsDiskEdgeOn50/seed{seed}'
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
