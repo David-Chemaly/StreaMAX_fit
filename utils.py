@@ -39,25 +39,30 @@ def halo_mass_from_stellar_mass(M_star,
             return 10**((jnp.log10(a)+jnp.log10(b))/2)
     return 10**((jnp.log10(a)+jnp.log10(b))/2)
 
-def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=True):
-    # Flattened NFW halo
+def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=True, use_flattening=True):
+    if use_flattening:
+        logM, Rs, dirx, diry, dirz, logm, rs, x0, z0, vx0, vy0, vz0, time, _ = params[:14]
+        q = get_q(dirx, diry, dirz)
+    else:
+        logM, Rs, logm, rs, x0, z0, vx0, vy0, vz0, time, _ = params[:11]
+        dirx, diry, dirz = 0.0, 0.0, 1.0
+        q = 1.0
+
+    # NFW host (flattened or spherical)
     type_host   = 'NFW'
-    params_host = {'logM': params[0], 'Rs': params[1], 
-                    'a': 1.0, 'b': 1.0, 'c': get_q(params[2], params[3], params[4]),
-                    'dirx': params[2], 'diry': params[3], 'dirz': params[4],
+    params_host = {'logM': logM, 'Rs': Rs, 
+                    'a': 1.0, 'b': 1.0, 'c': q,
+                    'dirx': dirx, 'diry': diry, 'dirz': dirz,
                     'x_origin': 0.0, 'y_origin': 0.0, 'z_origin': 0.0}
 
     # Plummer Sattelite
     type_sat   = 'Plummer'
-    params_sat = {'logM': params[5], 'Rs': params[6],
-                    'x_origin': params[7], 'y_origin': 0.0, 'z_origin': params[8]}
+    params_sat = {'logM': logm, 'Rs': rs,
+                    'x_origin': x0, 'y_origin': 0.0, 'z_origin': z0}
 
     # Initial conditions
-    xv_f = jnp.array([params[7], 0.0, params[8],  # Position in kpc
-                    params[9], params[10], params[11]])   # Velocity in kpc/Gyr
-
-    # Integration time
-    time  = params[12] # Gyr
+    xv_f = jnp.array([x0, 0.0, z0,  # Position in kpc
+                    vx0, vy0, vz0])   # Velocity in kpc/Gyr
 
     _, _, xv_stream, xhi_stream = StreaMAX.generate_stream(xv_f, 
                                                             type_host, params_host, 
