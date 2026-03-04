@@ -93,6 +93,7 @@ if __name__ == "__main__":
         ndim = 11
     n_min = 3
     nlive = 2000
+    var_ratio_default = 9.0
     var_ratio_vel = 9.0
 
     PATH_INPUT = f'/data/dc824-2/SGA_Streams'
@@ -106,6 +107,12 @@ if __name__ == "__main__":
         if col not in strings_df.columns:
             print(f"Warning: column '{col}' not found in STRRINGS.xlsx")
     strings_df["Name"] = strings_df["Name"].astype(str).str.strip()
+    for col in ["sigma_ratio", "N", "Var ratio", "v", "v_err", "v_host", "v_err_host"]:
+        if col in strings_df.columns:
+            strings_df[col] = pd.to_numeric(
+                strings_df[col].astype(str).str.replace(",", ".", regex=False).str.strip(),
+                errors="coerce"
+            )
     strings_xlsx = strings_df.set_index("Name").to_dict(orient="index")
 
     index = -1
@@ -121,10 +128,10 @@ if __name__ == "__main__":
         dict_data['bin_width'] = np.diff(dict_data['theta']).min()
 
         stream_cfg = strings_xlsx.get(name, {})
-        var_ratio_i = stream_cfg.get('Var_ratio', np.nan)
+        var_ratio_i = stream_cfg.get('Var ratio', np.nan)
         if not np.isfinite(var_ratio_i):
-            print(f"Skipping {name}: missing/invalid Var ratio in STRRINGS.xlsx")
-            continue
+            print(f"Using default Var ratio={var_ratio_default} for {name} (missing/invalid in STRRINGS.xlsx)")
+            var_ratio_i = var_ratio_default
         var_ratio_i = float(var_ratio_i)
         var_ratio_vel_i = var_ratio_vel
 
