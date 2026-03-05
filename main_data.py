@@ -91,6 +91,8 @@ if __name__ == "__main__":
         ndim = 12
     else:
         ndim = 11
+    prior_fn = get_prior_transform(use_kinematics, use_flattening)
+    logl_fn = logl_pos_vel if use_kinematics else logl_pos
     n_min = 3
     nlive = 2000
     var_ratio_default = 9.0
@@ -176,7 +178,7 @@ if __name__ == "__main__":
             M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
 
             print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center (kinematics={use_kinematics}, flattening={use_flattening})')
-            dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio_i, nlive=nlive, use_kinematics=use_kinematics, use_flattening=use_flattening, var_ratio_vel=var_ratio_vel_i)
+            dict_results = dynesty_fit(dict_data, logl_fn, prior_fn, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio_i, nlive=nlive, use_kinematics=use_kinematics, use_flattening=use_flattening, var_ratio_vel=var_ratio_vel_i)
             with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
                 pickle.dump(dict_results, f)
 

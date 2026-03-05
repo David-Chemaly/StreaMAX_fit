@@ -10,11 +10,15 @@ def dynesty_fit(dict_data, logl_fn, prior_fn, ndim, n_particles=10000, n_min=101
     mp.set_start_method("spawn", force=True)
     if var_ratio_vel is None:
         var_ratio_vel = var_ratio
+    if use_kinematics:
+        logl_args = (dict_data, n_particles, n_min, var_ratio, min_err, use_flattening, var_ratio_vel)
+    else:
+        logl_args = (dict_data, n_particles, n_min, var_ratio, min_err, use_flattening)
     with mp.Pool(nthreads) as poo:
         dns = dynesty.DynamicNestedSampler(logl_fn,
                                 prior_fn,
                                 ndim,
-                                logl_args=(dict_data, n_particles, n_min, var_ratio, min_err, use_kinematics, use_flattening, var_ratio_vel),
+                                logl_args=logl_args,
                                 nlive=nlive,
                                 sample='rslice',
                                 pool=poo,
