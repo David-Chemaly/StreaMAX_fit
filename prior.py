@@ -2,6 +2,8 @@ import jax
 import jax.numpy as jnp
 
 def prior_transform(p):
+    # Keep unit-cube values away from exact 0/1 to avoid inf from ndtri.
+    p = jnp.clip(p, 1e-12, 1.0 - 1e-12)
     ndim = len(p)
     if ndim == 14:
         logM, Rs, dirx, diry, dirz, \

@@ -8,6 +8,7 @@ import numpy as np
 from utils import params_to_stream
 
 BAD_VAL = -1e15
+VAR_EPS = 1e-8
 
 def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_pos=9.0, min_err=0., use_kinematics=False, use_flattening=True, var_ratio_vel=None):
     theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles, use_flattening=use_flattening)
@@ -20,7 +21,8 @@ def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_pos=9.0, min_e
         logl = BAD_VAL * n_bad
     
     else:
-        var_data  = jnp.clip(dict_data['r_err'], a_min=min_err, a_max=None)**2
+        err_floor = jnp.maximum(min_err, VAR_EPS)
+        var_data  = jnp.clip(dict_data['r_err'], a_min=err_floor, a_max=None)**2
         var_model = sig_bin**2 / count_bin
         n_high_error = jnp.sum( var_model / var_data > 1/var_ratio_pos )
         if n_high_error > 0:
@@ -28,7 +30,7 @@ def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_pos=9.0, min_e
         
         else:
             sig_r = params[-2] if use_kinematics else params[-1]
-            var = var_data + sig_r**2
+            var = jnp.maximum(var_data + sig_r**2, VAR_EPS)
             logl  = -.5 * jnp.sum( (r_bin - dict_data['r'])**2 / var  + jnp.log(2 * jnp.pi * var))
 
             # Optional kinematic term on line-of-sight velocity around a reference angle.
@@ -44,12 +46,13 @@ def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_pos=9.0, min_e
                     vz_sel = xv_stream[:, 5][mask]
                     vz_model = jnp.mean(vz_sel)
                     vz_model_var = jnp.var(vz_sel) / count_vz
-                    vz_data_var = jnp.clip(dict_data['vz_err'], a_min=min_err, a_max=None)**2
+                    vz_data_var = jnp.clip(dict_data['vz_err'], a_min=err_floor, a_max=None)**2
                     if vz_model_var / vz_data_var > 1/var_ratio_vel:
                         logl += BAD_VAL/1e3
                     else:
                         sig_v = params[-1]
-                        vz_var = vz_data_var + sig_v**2
+                        vz_var = jnp.maximum(vz_data_var + sig_v**2, VAR_EPS)
                         logl += -.5 * ((dict_data['vz'] - vz_model)**2 / vz_var + jnp.log(2 * jnp.pi * vz_var))
 
+    logl = jnp.where(jnp.isfinite(logl), logl, BAD_VAL)
     return logl
