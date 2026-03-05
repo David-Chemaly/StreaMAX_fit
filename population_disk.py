@@ -57,7 +57,7 @@ if __name__ == "__main__":
     df = pd.read_excel(f'STRRINGS.xlsx')
 
 
-    PATH_DATA = f'/data/dc824-2/MockStreamsDiskEdgeOn'
+    PATH_DATA = f'/data/dc824-2/MockStreamsDiskEdgeOn50'
     N = 25
 
     MSE_list = []
