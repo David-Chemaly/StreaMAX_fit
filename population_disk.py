@@ -115,19 +115,19 @@ if __name__ == "__main__":
     q_all_big = {}
 
     q_fits = []
-    for i in np.argsort(M_ratio_list)[:24]:
+    for i in np.argsort(M_ratio_list)[:N]:
         q_fits.append(q_all[i])
     q_all_big[0] = q_fits
 
-    q_fits = []
-    for i in np.argsort(M_ratio_list)[24:48]:
-        q_fits.append(q_all[i])
-    q_all_big[1] = q_fits
+    # q_fits = []
+    # for i in np.argsort(M_ratio_list)[24:48]:
+    #     q_fits.append(q_all[i])
+    # q_all_big[1] = q_fits
 
-    q_fits = []
-    for i in np.argsort(M_ratio_list)[48:]:
-        q_fits.append(q_all[i])
-    q_all_big[2] = q_fits
+    # q_fits = []
+    # for i in np.argsort(M_ratio_list)[48:]:
+    #     q_fits.append(q_all[i])
+    # q_all_big[2] = q_fits
 
     nlive = 500
     ndim  = 2
