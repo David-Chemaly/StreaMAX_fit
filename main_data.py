@@ -17,6 +17,8 @@ from prior import *
 from llikelihood import *
 from fit import *
 
+KM_S_TO_KPC_GYR = 1.0227121650537077
+
 def extra_processing(name, dict_data):
         if name == 'NGC1084_GROUP_factor2.5_pixscale0.6':
             arg_region = np.array([ 4, 6, 9, 14, 18, 22, 25, 28, 30, 33, 35, 37, 40, 42])
@@ -79,113 +81,138 @@ def extra_processing(name, dict_data):
         return dict_data
 
 if __name__ == "__main__":
-    ndim  = 14
+    ndim  = 12
     n_min = 3
     nlive = 2000
-    var_ratio = 4.0
-    n_particles_per_point = 1500
-    n_particles_min = 10000
+    var_ratio_v = 9.0
+    logl_fn = logl_v
+    prior_transform_fn = prior_transform_v
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
-
-    # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4.0_pixscale0.6',
-    #                         'PGC039258_factor2.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6']
-    # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC000902_factor4', 'PGC938075_factor4.5_pixscale0.6']
-    # list_undone_names = ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6']
-    list_undone_names = ['PGC000902_factor4.0_pixscale0.6', 'PGC938075_factor4.5_pixscale0.6', 'PGC1092512_factor2.5_pixscale0.6']
-
+    strings_df = pd.read_excel('STRRINGS.xlsx')
+    strings_df = strings_df.rename(columns={c: c.strip() if isinstance(c, str) else c for c in strings_df.columns})
+    strings_df['Name'] = strings_df['Name'].astype(str).str.strip()
+    for col in ['sigma_ratio', 'N', 'Var ratio', 'v', 'v_err', 'v_host', 'v_err_host']:
+        if col in strings_df.columns:
+            strings_df[col] = pd.to_numeric(strings_df[col], errors='coerce')
+    strings_by_name = strings_df.set_index('Name').to_dict(orient='index')
 
     index = -1
     for name in tqdm(names, leave=True):
         index += 1
 
-        if name in list_undone_names:
-            with open(f"{PATH_DATA}/{name}/dict_track.pkl", "rb") as f:
-                dict_data = pickle.load(f)
-            dict_data = extra_processing(name, dict_data)
+        with open(f"{PATH_DATA}/{name}/dict_track.pkl", "rb") as f:
+            dict_data = pickle.load(f)
+        dict_data = extra_processing(name, dict_data)
 
-            # This sets the progenitor in the middle of the stream
-            dict_data['delta_theta'] = np.median(dict_data['theta'])
-            dict_data['theta'] -= dict_data['delta_theta']
-            dict_data['bin_width'] = np.diff(dict_data['theta']).min()
+        # This sets the progenitor in the middle of the stream
+        dict_data['delta_theta'] = np.median(dict_data['theta'])
+        dict_data['theta'] -= dict_data['delta_theta']
+        dict_data['bin_width'] = np.diff(dict_data['theta']).min()
+        cfg = strings_by_name.get(name, {})
+        var_ratio_i = cfg.get('Var ratio', np.nan)
+        var_ratio_i = float(var_ratio_i)
 
-            n_particles = jnp.maximum(n_particles_min, n_particles_per_point * len(dict_data['theta'])).item()
+        n_particles_i = cfg.get('N', np.nan)
+        if not (np.isfinite(n_particles_i) and n_particles_i > 0):
+            print(f"Skipping {name}: missing/invalid N in STRRINGS.xlsx")
+            continue
+        n_particles_i = int(n_particles_i)
 
-            new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_Transform_ndim{ndim}_Nparticles{n_particles}_Nmin{n_min}_VarRatio{var_ratio}_nlive{nlive}'
-            if not os.path.exists(new_PATH_DATA):         
-                os.makedirs(new_PATH_DATA, exist_ok=True)
-                
-                M_stellar = STRRINGS_catalogue.iloc[index]['M_stream']/STRRINGS_catalogue.iloc[index]['M_stream/M_host']
-                M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
+        # Add velocity data for logl_v (km/s -> kpc/Gyr).
+        v = cfg.get('v', np.nan)
+        v_err = cfg.get('v_err', np.nan)
+        v_host = cfg.get('v_host', np.nan)
+        v_err_host = cfg.get('v_err_host', np.nan)
+        if not (np.isfinite(v) and np.isfinite(v_err) and v_err > 0):
+            print(f"Skipping {name}: missing/invalid numeric v or v_err in STRRINGS.xlsx")
+            continue
+        if np.isfinite(v_host) and np.isfinite(v_err_host) and v_err_host > 0:
+            vz = float(v) - float(v_host)
+            vz_err = np.sqrt(float(v_err)**2 + float(v_err_host)**2)
+        else:
+            vz = float(v)
+            vz_err = float(v_err)
+        dict_data['vz'] = vz * KM_S_TO_KPC_GYR
+        dict_data['vz_err'] = vz_err * KM_S_TO_KPC_GYR
+        dict_data['vz_theta'] = 0.0
+        dict_data['vz_window'] = dict_data['bin_width']
 
-                print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
-                dict_results = dynesty_fit(dict_data, logl, prior_transform, ndim, n_particles=n_particles, n_min=n_min, var_ratio=var_ratio, nlive=nlive)
-                with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
-                    pickle.dump(dict_results, f)
+        new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_Transform_ndim{ndim}_Nparticles{n_particles_i}_Nmin{n_min}_VarRatio{var_ratio_i}_nlive{nlive}'
+        if not os.path.exists(new_PATH_DATA):         
+            os.makedirs(new_PATH_DATA, exist_ok=True)
+            
+            M_stellar = STRRINGS_catalogue.iloc[index]['M_stream']/STRRINGS_catalogue.iloc[index]['M_stream/M_host']
+            M_halo = np.log10(halo_mass_from_stellar_mass(M_stellar))
 
-                # Plot and Save corner plot
-                labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
-                figure = corner.corner(dict_results['samps'], 
-                            labels=labels,
-                            color='blue',
-                            quantiles=[0.16, 0.5, 0.84],
-                            show_titles=True, 
-                            title_kwargs={"fontsize": 16},
-                            truths=[M_halo, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
-                            truth_color='red',
-                            )
-                figure.savefig(f'{new_PATH_DATA}/corner_plot.pdf')
-                plt.close(figure)
+            print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
+            dict_results = dynesty_fit(dict_data, logl_fn, prior_transform_fn, ndim, n_particles=n_particles_i, n_min=n_min, var_ratio=var_ratio_i, var_ratio_v=var_ratio_v, nlive=nlive)
+            with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
+                pickle.dump(dict_results, f)
 
-                # Plot and Save flattening
-                q_samps = get_q(dict_results['samps'][:, 2], dict_results['samps'][:, 3], dict_results['samps'][:, 4])
-                plt.figure(figsize=(8, 6))
-                plt.hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
-                plt.axvline(np.median(q_samps), color='blue', linestyle='--', lw=2)
-                plt.axvline(np.percentile(q_samps, 16), color='blue', linestyle=':', lw=2)
-                plt.axvline(np.percentile(q_samps, 84), color='blue', linestyle=':', lw=2)
-                plt.axvline(1.0, color='k', linestyle='-', lw=2)
-                plt.xlabel('Halo Flattening')
-                plt.ylabel('Density')
-                plt.tight_layout()
-                plt.savefig(f'{new_PATH_DATA}/q_posterior.pdf')
-                plt.close()
+            # Plot and Save corner plot
+            labels = ['logM', 'Rs', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig', 'sig_v']
+            figure = corner.corner(dict_results['samps'], 
+                        labels=labels,
+                        color='blue',
+                        quantiles=[0.16, 0.5, 0.84],
+                        show_titles=True, 
+                        title_kwargs={"fontsize": 16},
+                        truths=[M_halo, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        truth_color='red',
+                        )
+            figure.savefig(f'{new_PATH_DATA}/corner_plot.pdf')
+            plt.close(figure)
 
-                # Plot and Save Best fit on Data
-                best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
-                theta_stream, r_stream, xv_stream = params_to_stream(best_params, n_particles)
-                r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
-                if name == 'PGC938075_factor4.5_pixscale0.6':
-                    r_bin /= 100
-                    xv_stream /= 100
-                x_bin = r_bin * np.cos(dict_data['theta'] + dict_data['delta_theta'])
-                y_bin = r_bin * np.sin(dict_data['theta'] + dict_data['delta_theta'])
+            # Plot and Save flattening
+            q_samps = np.ones(len(dict_results['samps']))
+            plt.figure(figsize=(8, 6))
+            plt.hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
+            plt.axvline(np.median(q_samps), color='blue', linestyle='--', lw=2)
+            plt.axvline(np.percentile(q_samps, 16), color='blue', linestyle=':', lw=2)
+            plt.axvline(np.percentile(q_samps, 84), color='blue', linestyle=':', lw=2)
+            plt.axvline(1.0, color='k', linestyle='-', lw=2)
+            plt.xlabel('Halo Flattening')
+            plt.ylabel('Density')
+            plt.tight_layout()
+            plt.savefig(f'{new_PATH_DATA}/q_posterior.pdf')
+            plt.close()
 
-                # rotate Cartesian positions by +delta_theta
-                x0 = xv_stream[:, 0]
-                y0 = xv_stream[:, 1]
-                dt = dict_data['delta_theta']
-                c, s = np.cos(dt), np.sin(dt)
-                x_stream = x0 * c - y0 * s
-                y_stream = x0 * s + y0 * c
+            # Plot and Save Best fit on Data
+            best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
+            theta_stream, r_stream, xv_stream = params_to_stream_v(best_params, n_particles_i)
+            r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
+            if name == 'PGC938075_factor4.5_pixscale0.6':
+                r_bin /= 100
+                xv_stream /= 100
+            x_bin = r_bin * np.cos(dict_data['theta'] + dict_data['delta_theta'])
+            y_bin = r_bin * np.sin(dict_data['theta'] + dict_data['delta_theta'])
 
-                sga = Table.read(f'{PATH_DATA}/SGA-2020.fits', hdu=1)
-                residual, mask, z_redshift, pixel_to_kpc, PA = get_residuals_and_mask(PATH_DATA, sga, name)
-                center_x, center_y = residual.shape[1]//2, residual.shape[0]//2
+            # rotate Cartesian positions by +delta_theta
+            x0 = xv_stream[:, 0]
+            y0 = xv_stream[:, 1]
+            dt = dict_data['delta_theta']
+            c, s = np.cos(dt), np.sin(dt)
+            x_stream = x0 * c - y0 * s
+            y_stream = x0 * s + y0 * c
 
-                plt.figure(figsize=(12, 8))
-                plt.subplot(1, 2, 1)
-                plt.imshow(residual, origin='lower', cmap='gray')
-                plt.axis('off')
-                plt.subplot(1, 2, 2)
-                plt.imshow(residual, origin='lower', cmap='gray')
-                plt.scatter(x_stream / pixel_to_kpc + center_x, y_stream / pixel_to_kpc + center_y, c='blue', s=1, label='Best fit')
-                plt.scatter(x_bin / pixel_to_kpc + center_x, y_bin / pixel_to_kpc + center_y, c='lime')
-                plt.scatter(dict_data['x']/pixel_to_kpc + center_x, dict_data['y']/pixel_to_kpc + center_y, color='red', s=10, label='Data')
-                plt.xlim(0, residual.shape[1])
-                plt.ylim(0, residual.shape[0])
-                plt.axis('off')
-                plt.savefig(f'{new_PATH_DATA}/image_best_fit.pdf')
-                plt.close()
+            sga = Table.read(f'{PATH_DATA}/SGA-2020.fits', hdu=1)
+            residual, mask, z_redshift, pixel_to_kpc, PA = get_residuals_and_mask(PATH_DATA, sga, name)
+            center_x, center_y = residual.shape[1]//2, residual.shape[0]//2
+
+            plt.figure(figsize=(12, 8))
+            plt.subplot(1, 2, 1)
+            plt.imshow(residual, origin='lower', cmap='gray')
+            plt.axis('off')
+            plt.subplot(1, 2, 2)
+            plt.imshow(residual, origin='lower', cmap='gray')
+            plt.scatter(x_stream / pixel_to_kpc + center_x, y_stream / pixel_to_kpc + center_y, c='blue', s=1, label='Best fit')
+            plt.scatter(x_bin / pixel_to_kpc + center_x, y_bin / pixel_to_kpc + center_y, c='lime')
+            plt.scatter(dict_data['x']/pixel_to_kpc + center_x, dict_data['y']/pixel_to_kpc + center_y, color='red', s=10, label='Data')
+            plt.xlim(0, residual.shape[1])
+            plt.ylim(0, residual.shape[0])
+            plt.axis('off')
+            plt.savefig(f'{new_PATH_DATA}/image_best_fit.pdf')
+            plt.close()

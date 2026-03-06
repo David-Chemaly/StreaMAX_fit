@@ -35,3 +35,35 @@ def prior_transform(p):
         x1, z1, vx1, vy1, vz1,
         time1, sig1,
     ])
+
+def prior_transform_v(p):
+    #ndim = 12
+    logM, Rs, \
+    logm, rs, \
+    x0, z0, vx0, vy0, vz0, \
+    time, sig, sig_v = p
+
+    logM1 = 11 + 3 * logM
+    Rs1   = 5 + 20 * Rs
+
+    logm1 = 7 + 2 * logm
+    rs1   = 1 + 2 * rs
+
+    x1 = jax.scipy.special.ndtri(0.5 + x0 / 2) * 150
+    z1 = jax.scipy.special.ndtri(0.5 + z0 / 2) * 150
+
+    vx1 = jax.scipy.special.ndtri(vx0) * 250
+    vy1 = jax.scipy.special.ndtri(0.5 + vy0 / 2) * 250
+    vz1 = jax.scipy.special.ndtri(vz0) * 250
+
+    time1  = 1 + 3*time
+    sig1   = 25 * sig
+    sig_v1 = 50 * sig_v
+
+    
+    return jnp.array([
+        logM1, Rs1,
+        logm1, rs1,
+        x1, z1, vx1, vy1, vz1,
+        time1, sig1, sig_v1
+    ])
