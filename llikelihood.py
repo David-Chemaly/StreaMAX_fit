@@ -67,10 +67,10 @@ def logl_v(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, 
             logl = BAD_VAL/1e3 * n_high
         
         else:
-            var = var_data + params[11]**2
+            var = var_data + params[10]**2
             logl  = -.5 * jnp.sum( (r_bin - dict_data['r'])**2 / var  + jnp.log(2 * jnp.pi * var))
 
-            vz_var = vz_data_var + params[12]**2
+            vz_var = vz_data_var + params[11]**2
             logl += -.5 * ((dict_data['vz'] - vz_mean)**2 / vz_var + jnp.log(2 * jnp.pi * vz_var))
             
     return logl

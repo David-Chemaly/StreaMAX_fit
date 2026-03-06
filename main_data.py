@@ -88,7 +88,7 @@ if __name__ == "__main__":
     logl_fn = logl_v
     prior_transform_fn = prior_transform_v
 
-    PATH_DATA = f'/data/dc824-2/SGA_Streams'
+    PATH_DATA = f'/data/dc824-2/SGA_Streams_Kinematics'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
     strings_df = pd.read_excel('STRRINGS.xlsx')
