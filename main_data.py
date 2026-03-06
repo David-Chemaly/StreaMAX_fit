@@ -88,7 +88,8 @@ if __name__ == "__main__":
     logl_fn = logl_v
     prior_transform_fn = prior_transform_v
 
-    PATH_DATA = f'/data/dc824-2/SGA_Streams_Kinematics'
+    PATH_DATA = f'/data/dc824-2/SGA_Streams'
+    PATH_OUT  = f'/data/dc824-2/SGA_Streams_Kinematics'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
     strings_df = pd.read_excel('STRRINGS.xlsx')
@@ -140,7 +141,7 @@ if __name__ == "__main__":
         dict_data['vz_theta'] = 0.0
         dict_data['vz_window'] = dict_data['bin_width']
 
-        new_PATH_DATA = f'{PATH_DATA}/{name}/Plots_fixedProg_Sig_Transform_ndim{ndim}_Nparticles{n_particles_i}_Nmin{n_min}_VarRatio{var_ratio_i}_nlive{nlive}'
+        new_PATH_DATA = f'{PATH_OUT}/{name}/Plots_fixedProg_Sig_Transform_ndim{ndim}_Nparticles{n_particles_i}_Nmin{n_min}_VarRatio{var_ratio_i}_nlive{nlive}'
         if not os.path.exists(new_PATH_DATA):         
             os.makedirs(new_PATH_DATA, exist_ok=True)
             
