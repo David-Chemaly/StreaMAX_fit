@@ -5,7 +5,7 @@ import jax.numpy as jnp
 
 import numpy as np
 
-from utils import params_to_stream, params_to_stream_v
+from utils import params_to_stream
 
 BAD_VAL = -1e15
 

@@ -183,7 +183,7 @@ if __name__ == "__main__":
 
             # Plot and Save Best fit on Data
             best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
-            theta_stream, r_stream, xv_stream = params_to_stream_v(best_params, n_particles_i)
+            theta_stream, r_stream, xv_stream = params_to_stream(best_params, n_particles_i)
             r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
             if name == 'PGC938075_factor4.5_pixscale0.6':
                 r_bin /= 100
