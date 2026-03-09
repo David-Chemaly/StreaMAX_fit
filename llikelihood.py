@@ -31,9 +31,8 @@ def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, va
     return logl
 
 def logl_v(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0):
-    theta_stream, r_stream, xv_stream = params_to_stream_v(params, n_particles)
+    theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles)
     r_bin, sig_bin, count_bin = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
-
 
     n_bad = jnp.sum(count_bin < n_min)
 
@@ -67,10 +66,10 @@ def logl_v(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, 
             logl = BAD_VAL/1e3 * n_high
         
         else:
-            var = var_data + params[10]**2
+            var = var_data + params[13]**2 #params[10]**2
             logl  = -.5 * jnp.sum( (r_bin - dict_data['r'])**2 / var  + jnp.log(2 * jnp.pi * var))
 
-            vz_var = vz_data_var + params[11]**2
+            vz_var = vz_data_var + params[14]**2 # + params[11]**2
             logl += -.5 * ((dict_data['vz'] - vz_mean)**2 / vz_var + jnp.log(2 * jnp.pi * vz_var))
             
     return logl

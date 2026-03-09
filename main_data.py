@@ -81,7 +81,7 @@ def extra_processing(name, dict_data):
         return dict_data
 
 if __name__ == "__main__":
-    ndim  = 12
+    ndim  = 15
     n_min = 3
     nlive = 2000
     var_ratio_v = 9.0
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     prior_transform_fn = prior_transform_v
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
-    PATH_OUT  = f'/data/dc824-2/SGA_Streams_Kinematics'
+    PATH_OUT  = f'/data/dc824-2/SGA_Streams_Kinematics_Flattening'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
     strings_df = pd.read_excel('STRRINGS.xlsx')
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         dict_data['vz_theta'] = 0.0
         dict_data['vz_window'] = dict_data['bin_width']
 
-        new_PATH_DATA = f'{PATH_OUT}/{name}/Plots_fixedProg_Sig_Transform_ndim{ndim}_Nparticles{n_particles_i}_Nmin{n_min}_VarRatio{var_ratio_i}_nlive{nlive}'
+        new_PATH_DATA = f'{PATH_OUT}/{name}/Plots_ndim{ndim}_Nparticles{n_particles_i}_Nmin{n_min}_VarRatio{var_ratio_i}_nlive{nlive}'
         if not os.path.exists(new_PATH_DATA):         
             os.makedirs(new_PATH_DATA, exist_ok=True)
             
@@ -154,14 +154,14 @@ if __name__ == "__main__":
                 pickle.dump(dict_results, f)
 
             # Plot and Save corner plot
-            labels = ['logM', 'Rs', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig', 'sig_v']
+            labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig', 'sig_v']
             figure = corner.corner(dict_results['samps'], 
                         labels=labels,
                         color='blue',
                         quantiles=[0.16, 0.5, 0.84],
                         show_titles=True, 
                         title_kwargs={"fontsize": 16},
-                        truths=[M_halo, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+                        truths=[M_halo, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, dict_data['vz'], np.nan, np.nan, np.nan],
                         truth_color='red',
                         )
             figure.savefig(f'{new_PATH_DATA}/corner_plot.pdf')
