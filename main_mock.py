@@ -48,13 +48,13 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
 
         crit1 = jnp.all(jnp.diff(arg_take) == 1) # Must be continuous and
         crit2 = len(arg_take) > 9   # Must have at least 10 bins with more than 100 particles
-        crit3 = jnp.nansum(r_in[:-1]*jnp.tanh(jnp.diff(theta_in))) > 100 # Must have length of at least 100kpc
-        crit4 = jnp.min(r_stream) > 2  # Must be further than 2kpc minimum
-        crit5 = jnp.max(r_stream) < 500  # Must be less than 200kpc
+        # crit3 = jnp.nansum(r_in[:-1]*jnp.tanh(jnp.diff(theta_in))) > 100 # Must have length of at least 100kpc
+        crit4 = jnp.min(r_bin) <= 10 #jnp.min(r_stream) > 2  # Must be further than 2kpc minimum
+        crit5 = jnp.max(r_bin) <= 80 #jnp.max(r_stream) < 500  # Must be less than 200kpc
         crit6 = jnp.all(jnp.diff(theta_sat) > 0)  # Must be monotonic
         crit7 = jnp.all(w_bin<20)
 
-        if crit1 and crit2 and crit3 and crit4 and crit5 and crit6 and crit7: 
+        if crit1 and crit2 and crit4 and crit5 and crit6 and crit7: 
             is_data = True
 
     r_sig = r_in * sigma / 100
@@ -113,7 +113,7 @@ def plot_mock_data_stream(path, dict_stream):
     plt.close()
 
 if __name__ == "__main__":
-    N = 35
+    N = 25
     seeds = np.arange(N)+1
 
     ndim  = 14
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     sigma = 2
 
     for seed in tqdm(seeds, leave=True):
-        path = f'/data/dc824-2/MockStreamsDiskEdgeOn50Huge/seed{seed}'
+        path = f'/data/dc824-2/MockStreamsDiskEdgeOn50Rmin/seed{seed}'
 
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
