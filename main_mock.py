@@ -21,9 +21,9 @@ def get_mock_data_stream(seed, sigma=2, ndim=14, min_count=100):
     is_data = False
     rng = np.random.default_rng(int(seed))
 
-    disk_ratio    = 0.5
-    disk_Rs       = 15.0
-    disk_Hs       = 2.0
+    disk_ratio    = 0.02
+    disk_Rs       = 3.5
+    disk_Hs       = 0.5
 
     while not is_data:
         # Resample parameters
