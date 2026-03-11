@@ -168,7 +168,7 @@ if __name__ == "__main__":
             plt.close(figure)
 
             # Plot and Save flattening
-            q_samps = np.ones(len(dict_results['samps']))
+            q_samps = get_q(dict_results['samps'][:, 2], dict_results['samps'][:, 3], dict_results['samps'][:, 4])
             plt.figure(figsize=(8, 6))
             plt.hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
             plt.axvline(np.median(q_samps), color='blue', linestyle='--', lw=2)
