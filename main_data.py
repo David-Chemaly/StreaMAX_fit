@@ -92,7 +92,7 @@ if __name__ == "__main__":
     PATH_OUT  = f'/data/dc824-2/SGA_Streams_Kinematics_SraightForward'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
-    strings_df = pd.read_excel('STRRINGS.xlsx')
+    strings_df = pd.read_csv('STRRINGS.csv')
     strings_df = strings_df.rename(columns={c: c.strip() if isinstance(c, str) else c for c in strings_df.columns})
     strings_df['Name'] = strings_df['Name'].astype(str).str.strip()
     for col in ['sigma_ratio', 'N', 'Var ratio', 'v', 'v_err', 'v_host', 'v_err_host']:
