@@ -81,15 +81,15 @@ def extra_processing(name, dict_data):
         return dict_data
 
 if __name__ == "__main__":
-    ndim  = 15
+    ndim  = 14
     n_min = 3
     nlive = 2000
     var_ratio_v = 9.0
-    logl_fn = logl_v
-    prior_transform_fn = prior_transform_v
+    logl_fn = logl
+    prior_transform_fn = prior_transform
 
     PATH_DATA = f'/data/dc824-2/SGA_Streams'
-    PATH_OUT  = f'/data/dc824-2/SGA_Streams_Kinematics_Flattening'
+    PATH_OUT  = f'/data/dc824-2/SGA_Streams_Kinematics_SraightForward'
     names = np.loadtxt(f'{PATH_DATA}/names.txt', dtype=str)
     STRRINGS_catalogue = pd.read_csv(f'{PATH_DATA}/STRRINGS_catalogue.csv')
     strings_df = pd.read_excel('STRRINGS.xlsx')
@@ -102,6 +102,11 @@ if __name__ == "__main__":
 
     index = -1
     for name in tqdm(names, leave=True):
+
+        if name in ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC021008_factor2.5_pixscale0.6']:
+            print(f"Skipping {name} due to known issues.")
+            continue
+
         index += 1
 
         with open(f"{PATH_DATA}/{name}/dict_track.pkl", "rb") as f:

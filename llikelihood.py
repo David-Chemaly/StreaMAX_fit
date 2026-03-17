@@ -10,7 +10,7 @@ from utils import params_to_stream
 BAD_VAL = -1e15
 
 def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0):
-    theta_stream, r_stream, _ = params_to_stream(params, n_particles)
+    theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles)
     r_bin, sig_bin, count_bin = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
 
     n_bad = jnp.sum(count_bin < n_min)
@@ -27,6 +27,17 @@ def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, va
         else:
             var = var_data + params[13]**2
             logl  = -.5 * jnp.sum( (r_bin - dict_data['r'])**2 / var  + jnp.log(2 * jnp.pi * var))
+
+            # Add velocity constraint
+            theta_center = dict_data['vz_theta']
+            theta_half = dict_data['vz_window']/2
+            theta_vmin = theta_center - theta_half
+            theta_vmax = theta_center + theta_half
+            mask_v = (theta_stream >= theta_vmin) & (theta_stream <= theta_vmax)
+            count_v = jnp.sum(mask_v)
+            vz_sum = jnp.sum(xv_stream[:, 5] * mask_v)
+            vz_mean = vz_sum / count_v
+            logl += -.5 * ( (dict_data['vz'] - vz_mean)**2 / dict_data['vz_err']**2  )
 
     return logl
 
