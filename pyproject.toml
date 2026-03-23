@@ -1,0 +1,21 @@
+[project]
+name = "streamax-fit"
+version = "0.1.0"
+description = "Triaxial halo fitting pipeline using StreaMAX"
+requires-python = ">=3.12"
+dependencies = [
+    "streamax",
+    "jax",
+    "jaxlib",
+    "numpy",
+    "dynesty",
+    "corner",
+    "matplotlib",
+    "astropy",
+    "pandas",
+    "openpyxl",
+    "tqdm",
+    "scipy",
+    "pickle5; python_version<'3.8'",
+    "ipykernel",
+]

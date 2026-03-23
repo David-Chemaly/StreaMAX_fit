@@ -1,1 +1,8 @@
 play.ipynb
+__pycache__/
+.venv/
+.python-version
+*.csv
+*.xlsx
+*.numbers
+*.pkl
