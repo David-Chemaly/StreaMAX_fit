@@ -1,6 +1,7 @@
 import StreaMAX
 
 import os
+import json
 import argparse
 import jax
 import jax.numpy as jnp
@@ -202,7 +203,22 @@ if __name__ == "__main__":
     parser.add_argument('--min-count', type=int, default=3, help='Minimum particle count per data bin (default: 3)')
     args = parser.parse_args()
 
-    os.makedirs(args.output, exist_ok=True)
+    # Build run subdirectory from hyperparameters
+    run_name = f'nlive{args.nlive}_npart{args.n_particles}_nmin{args.n_min}_vr{args.var_ratio}'
+    run_dir = os.path.join(args.output, run_name)
+    os.makedirs(run_dir, exist_ok=True)
+
+    # Save hyperparameters
+    hyperparams = {
+        'nlive': args.nlive,
+        'n_particles': args.n_particles,
+        'n_min': args.n_min,
+        'var_ratio': args.var_ratio,
+        'n_bins': args.n_bins,
+        'min_count': args.min_count,
+    }
+    with open(os.path.join(run_dir, 'hyperparameters.json'), 'w') as f:
+        json.dump(hyperparams, f, indent=2)
 
     # Load data
     dict_data = load_stream_data(args.csv, n_bins=args.n_bins, min_count=args.min_count)
@@ -220,6 +236,7 @@ if __name__ == "__main__":
 
     print(f'Fitting {mode} model: ndim={ndim}, nlive={args.nlive}, '
           f'n_particles={args.n_particles}, n_min={args.n_min}, var_ratio={args.var_ratio}')
+    print(f'Run directory: {run_dir}')
 
     # Fit
     dict_results = dynesty_fit(dict_data, logl, prior_fn, ndim,
@@ -228,14 +245,14 @@ if __name__ == "__main__":
                                triaxial=args.triaxial)
 
     # Save results
-    with open(os.path.join(args.output, 'dict_results.pkl'), 'wb') as f:
+    with open(os.path.join(run_dir, 'dict_results.pkl'), 'wb') as f:
         pickle.dump(dict_results, f)
-    with open(os.path.join(args.output, 'dict_data.pkl'), 'wb') as f:
+    with open(os.path.join(run_dir, 'dict_data.pkl'), 'wb') as f:
         pickle.dump(dict_data, f)
-    print(f'Results saved to {args.output}')
+    print(f'Results saved to {run_dir}')
 
     # Plots
-    plot_corner(dict_results, args.output, triaxial=args.triaxial)
-    plot_best_fit(dict_data, dict_results, args.output, args.n_particles, triaxial=args.triaxial)
-    plot_flattening(dict_results, args.output, triaxial=args.triaxial)
+    plot_corner(dict_results, run_dir, triaxial=args.triaxial)
+    plot_best_fit(dict_data, dict_results, run_dir, args.n_particles, triaxial=args.triaxial)
+    plot_flattening(dict_results, run_dir, triaxial=args.triaxial)
     print('Plots saved')
