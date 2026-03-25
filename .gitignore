@@ -1,4 +1,4 @@
-play.ipynb
+*.ipynb
 __pycache__/
 .venv/
 .python-version

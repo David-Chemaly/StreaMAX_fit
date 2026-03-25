@@ -23,7 +23,7 @@ LABELS_TRI = ['logM', 'Rs', 'p', 'q', 'dirx', 'diry', 'dirz',
               'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
 
 
-def load_stream_data(csv_path, n_bins=36, min_count=3):
+def load_stream_data(csv_path, theta_min=-2 * np.pi, theta_max=2 * np.pi, n_bins=36, min_count=3):
     df = pd.read_csv(csv_path)
     x, y = df['x'].values, df['y'].values
     chi = df['phase_chi'].values
@@ -43,7 +43,7 @@ def load_stream_data(csv_path, n_bins=36, min_count=3):
     theta -= theta_prog
 
     # Bin
-    theta_edges = np.linspace(-2 * np.pi, 2 * np.pi, n_bins + 1)
+    theta_edges = np.linspace(theta_min, theta_max, n_bins + 1)
     bin_width = theta_edges[1] - theta_edges[0]
     binned = np.digitize(theta, bins=theta_edges)
 
@@ -201,10 +201,12 @@ if __name__ == "__main__":
     parser.add_argument('--var-ratio', type=float, default=9.0, help='Variance ratio threshold (default: 9.0)')
     parser.add_argument('--n-bins', type=int, default=36, help='Number of angular bins for data (default: 36)')
     parser.add_argument('--min-count', type=int, default=3, help='Minimum particle count per data bin (default: 3)')
+    parser.add_argument('--theta_min', type=float, default=-2, help='Minimum theta for binning factor of pi (default: -2)')
+    parser.add_argument('--theta_max', type=float, default=2, help='Maximum theta for binning factor of pi (default: 2)')
     args = parser.parse_args()
 
     # Build run subdirectory from hyperparameters
-    run_name = f'nlive{args.nlive}_npart{args.n_particles}_nmin{args.n_min}_vr{args.var_ratio}'
+    run_name = f'npart{args.n_particles}_vr{args.var_ratio}_thmin{args.theta_min}pi_thmax{args.theta_max}pi_nbins{args.n_bins}'
     run_dir = os.path.join(args.output, run_name)
     os.makedirs(run_dir, exist_ok=True)
 
@@ -216,12 +218,14 @@ if __name__ == "__main__":
         'var_ratio': args.var_ratio,
         'n_bins': args.n_bins,
         'min_count': args.min_count,
+        'theta_min': args.theta_min,
+        'theta_max': args.theta_max,
     }
     with open(os.path.join(run_dir, 'hyperparameters.json'), 'w') as f:
         json.dump(hyperparams, f, indent=2)
 
     # Load data
-    dict_data = load_stream_data(args.csv, n_bins=args.n_bins, min_count=args.min_count)
+    dict_data = load_stream_data(args.csv, theta_min=args.theta_min*np.pi, theta_max=args.theta_max*np.pi, n_bins=args.n_bins, min_count=args.min_count)
     print(f'Loaded {len(dict_data["theta"])} data points from {args.csv}')
 
     # Setup
@@ -235,7 +239,7 @@ if __name__ == "__main__":
         mode = 'axisymmetric'
 
     print(f'Fitting {mode} model: ndim={ndim}, nlive={args.nlive}, '
-          f'n_particles={args.n_particles}, n_min={args.n_min}, var_ratio={args.var_ratio}')
+          f'n_particles={args.n_particles}, n_min={args.n_min}, var_ratio={args.var_ratio}, 'f'n_bins={args.n_bins}, theta_min={args.theta_min}pi, theta_max={args.theta_max}pi')
     print(f'Run directory: {run_dir}')
 
     # Fit
