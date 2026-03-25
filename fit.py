@@ -1,37 +1,94 @@
-import os
+import time as timer
 import numpy as np
-import multiprocessing as mp
+import jax
+import jax.numpy as jnp
+import jax.random as random
+from tqdm import tqdm
 
-import dynesty
-import dynesty.utils as dyut
+import blackjax
+from blackjax.ns.utils import finalise, sample as ns_sample, ess as ns_ess
 
-def dynesty_fit(dict_data, logl_fn, prior_fn, ndim, n_particles=10000, n_min=101, var_ratio=9.0, nlive=2000, triaxial=False):
-    nthreads = os.cpu_count()
-    mp.set_start_method("spawn", force=True)
-    logl_args = (dict_data, n_particles, n_min, var_ratio, triaxial)
-    with mp.Pool(nthreads) as poo:
-        dns = dynesty.DynamicNestedSampler(logl_fn,
-                                prior_fn,
-                                ndim,
-                                logl_args=logl_args,
-                                nlive=nlive,
-                                sample='rslice',
-                                pool=poo,
-                                queue_size=nthreads * 2)
-        dns.run_nested(n_effective=10000)
+from prior import logprior_axi, logprior_tri, sample_prior_axi, sample_prior_tri
+from llikelihood import logl
 
-    res   = dns.results
-    inds  = np.arange(len(res.samples))
-    inds  = dyut.resample_equal(inds, weights=np.exp(res.logwt - res.logz[-1]))
-    samps = res.samples[inds]
-    logl  = res.logl[inds]
 
-    dns_results = {
-                    'dns': dns,
-                    'samps': samps,
-                    'logl': logl,
-                    'logz': res.logz,
-                    'logzerr': res.logzerr,
-                }
+def blackjax_ns_fit(dict_data, n_particles=10000, n_min=3, var_ratio=9.0,
+                    num_live=500, max_iterations=50000, num_inner_steps=None,
+                    dlogZ_threshold=0.01, triaxial=False):
+    jax_data = {k: jnp.array(v) for k, v in dict_data.items()}
 
-    return dns_results
+    if triaxial:
+        logprior_fn = logprior_tri
+        sample_fn = sample_prior_tri
+        ndim = 16
+    else:
+        logprior_fn = logprior_axi
+        sample_fn = sample_prior_axi
+        ndim = 14
+
+    if num_inner_steps is None:
+        num_inner_steps = ndim * 5
+
+    def loglikelihood_fn(params):
+        return logl(params, jax_data, n_particles, n_min, var_ratio, triaxial)
+
+    # Sample initial live points from prior
+    key = random.PRNGKey(42)
+    key, init_key = random.split(key)
+    positions = sample_fn(init_key, num_live)
+
+    # Create sampler
+    sampler = blackjax.nss(
+        logprior_fn=logprior_fn,
+        loglikelihood_fn=loglikelihood_fn,
+        num_inner_steps=num_inner_steps,
+    )
+    state = sampler.init(positions)
+
+    # Run with progress bar
+    dead_list = []
+    print(f'Nested sampling: {num_live} live points, {ndim}D, '
+          f'{num_inner_steps} inner steps, dlogZ threshold={dlogZ_threshold}')
+    t0 = timer.time()
+
+    pbar = tqdm(range(max_iterations), desc='NS')
+    for i in pbar:
+        key = random.fold_in(key, i)
+        state, info = sampler.step(key, state)
+        dead_list.append(info)
+
+        if i > 0 and i % 100 == 0:
+            logZ = float(state.integrator.logZ)
+            logZ_live = float(state.integrator.logZ_live)
+            logZ_total = float(jnp.logaddexp(state.integrator.logZ, state.integrator.logZ_live))
+            dlogZ = logZ_total - logZ
+            pbar.set_postfix(logZ=f'{logZ_total:.1f}', dlogZ=f'{dlogZ:.4f}')
+            if dlogZ < dlogZ_threshold:
+                print(f'\nConverged at iteration {i}: dlogZ={dlogZ:.6f}')
+                break
+
+    t_elapsed = timer.time() - t0
+    print(f'Completed in {t_elapsed:.1f}s ({t_elapsed/60:.1f} min), {i+1} iterations')
+
+    # Finalize: combine dead particles + remaining live points
+    final_info = finalise(state, dead_list)
+
+    # Evidence
+    logZ = float(jnp.logaddexp(state.integrator.logZ, state.integrator.logZ_live))
+
+    # Resample to equal-weight posterior samples
+    key, sample_key, ess_key = random.split(key, 3)
+    posterior = ns_sample(sample_key, final_info, shape=10000)
+    samps = np.array(posterior.position)
+    logl_vals = np.array(posterior.loglikelihood)
+
+    ess_val = float(ns_ess(ess_key, final_info))
+
+    print(f'log Z = {logZ:.2f}, ESS = {ess_val:.0f}')
+
+    return {
+        'samps': samps,
+        'logl': logl_vals,
+        'log_Z': logZ,
+        'ESS': ess_val,
+    }

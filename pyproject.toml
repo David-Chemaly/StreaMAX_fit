@@ -18,4 +18,8 @@ dependencies = [
     "scipy",
     "pickle5; python_version<'3.8'",
     "ipykernel",
+    "blackjax",
 ]
+
+[tool.uv.sources]
+blackjax = { git = "https://github.com/handley-lab/blackjax.git", rev = "nested_sampling" }

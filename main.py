@@ -1,6 +1,7 @@
 import StreaMAX
 
 import os
+import json
 import argparse
 import jax
 import jax.numpy as jnp
@@ -12,9 +13,7 @@ import matplotlib.pyplot as plt
 plt.rcParams.update({'font.size': 18})
 
 from utils import params_to_stream, get_q
-from prior import prior_transform_axi, prior_transform_tri
-from llikelihood import logl
-from fit import dynesty_fit
+from fit import blackjax_ns_fit
 
 LABELS_AXI = ['logM', 'Rs', 'dirx', 'diry', 'dirz',
               'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
@@ -28,7 +27,6 @@ def load_stream_data(csv_path, n_bins=36, min_count=3):
     chi = df['phase_chi'].values
     accreted = df['AccretedFlag'].values
 
-    # Sort by phase angle, compute projected r and unwrapped theta
     arg_sort = np.argsort(chi)
     x_sorted = x[arg_sort]
     y_sorted = y[arg_sort]
@@ -37,11 +35,9 @@ def load_stream_data(csv_path, n_bins=36, min_count=3):
     r = np.sqrt(x_sorted**2 + y_sorted**2)
     theta = np.unwrap(np.arctan2(y_sorted, x_sorted))
 
-    # Center theta at the progenitor (mean unwrapped theta of accreted particles)
     theta_prog = theta[accreted_sorted == 1].mean()
     theta -= theta_prog
 
-    # Bin
     theta_edges = np.linspace(-2 * np.pi, 2 * np.pi, n_bins + 1)
     bin_width = theta_edges[1] - theta_edges[0]
     binned = np.digitize(theta, bins=theta_edges)
@@ -62,26 +58,18 @@ def load_stream_data(csv_path, n_bins=36, min_count=3):
     counts = np.array(counts)
     r_err = r_sig / np.sqrt(counts)
 
-    dict_data = {
-        'theta': theta_data,
-        'r': r_data,
-        'r_err': r_err,
-        'bin_width': bin_width,
-        'delta_theta': theta_prog,
-        'r_sig': r_sig,
-        'counts': counts,
+    return {
+        'theta': theta_data, 'r': r_data, 'r_err': r_err,
+        'bin_width': bin_width, 'delta_theta': theta_prog,
+        'r_sig': r_sig, 'counts': counts,
     }
-
-    return dict_data
 
 
 def plot_corner(dict_results, path, triaxial=False):
     labels = LABELS_TRI if triaxial else LABELS_AXI
     figure = corner.corner(dict_results['samps'],
-                labels=labels,
-                color='blue',
-                quantiles=[0.16, 0.5, 0.84],
-                show_titles=True,
+                labels=labels, color='blue',
+                quantiles=[0.16, 0.5, 0.84], show_titles=True,
                 title_kwargs={"fontsize": 12})
     figure.savefig(os.path.join(path, 'corner_plot.pdf'), bbox_inches='tight')
     plt.close(figure)
@@ -91,32 +79,26 @@ def plot_best_fit(dict_data, dict_results, path, n_particles, triaxial=False):
     best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
     theta_stream, r_stream, xv_stream = params_to_stream(best_params, n_particles, triaxial=triaxial)
 
-    # Model track at the data theta points
     r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(
         theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
 
     dt = dict_data['delta_theta']
     c, s = np.cos(dt), np.sin(dt)
-
-    # Rotate model stream to absolute frame
     x0 = np.array(xv_stream[:, 0])
     y0 = np.array(xv_stream[:, 1])
     x_stream = x0 * c - y0 * s
     y_stream = x0 * s + y0 * c
 
-    # Data in absolute frame
     theta_abs = dict_data['theta'] + dt
     x_data = dict_data['r'] * np.cos(theta_abs)
     y_data = dict_data['r'] * np.sin(theta_abs)
 
-    # Model binned track in absolute frame
     r_bin_np = np.array(r_bin)
     x_bin = r_bin_np * np.cos(theta_abs)
     y_bin = r_bin_np * np.sin(theta_abs)
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 7))
 
-    # XY plot
     axes[0].scatter(x_stream, y_stream, c='blue', s=1, alpha=0.3, label='Best fit stream')
     axes[0].scatter(x_bin, y_bin, c='lime', s=40, zorder=5, label='Model track')
     axes[0].scatter(x_data, y_data, c='red', s=30, zorder=6, label='Data')
@@ -125,7 +107,6 @@ def plot_best_fit(dict_data, dict_results, path, n_particles, triaxial=False):
     axes[0].set_aspect('equal')
     axes[0].legend(fontsize=12)
 
-    # Theta-r plot
     axes[1].errorbar(dict_data['theta'], dict_data['r'], yerr=dict_data['r_err'],
                      fmt='o', color='red', capsize=3, label='Data')
     axes[1].scatter(dict_data['theta'], r_bin_np, c='lime', s=40, zorder=5, label='Model track')
@@ -190,11 +171,13 @@ def plot_flattening(dict_results, path, triaxial=False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Fit a stellar stream with StreaMAX')
+    parser = argparse.ArgumentParser(description='Fit a stellar stream with StreaMAX (BlackJAX NS)')
     parser.add_argument('csv', help='Path to the stream CSV file')
     parser.add_argument('-o', '--output', required=True, help='Output directory for results and plots')
     parser.add_argument('--triaxial', action='store_true', help='Use triaxial model (default: axisymmetric)')
-    parser.add_argument('--nlive', type=int, default=2000, help='Number of live points (default: 2000)')
+    parser.add_argument('--num-live', type=int, default=500, help='Number of live points (default: 500)')
+    parser.add_argument('--max-iterations', type=int, default=50000, help='Maximum NS iterations (default: 50000)')
+    parser.add_argument('--dlogZ', type=float, default=0.01, help='Convergence threshold (default: 0.01)')
     parser.add_argument('--n-particles', type=int, default=10000, help='Stream particles per likelihood call (default: 10000)')
     parser.add_argument('--n-min', type=int, default=3, help='Minimum particles per model bin (default: 3)')
     parser.add_argument('--var-ratio', type=float, default=9.0, help='Variance ratio threshold (default: 9.0)')
@@ -202,40 +185,52 @@ if __name__ == "__main__":
     parser.add_argument('--min-count', type=int, default=3, help='Minimum particle count per data bin (default: 3)')
     args = parser.parse_args()
 
-    os.makedirs(args.output, exist_ok=True)
+    # Build run subdirectory from hyperparameters
+    run_name = f'nlive{args.num_live}_npart{args.n_particles}_nmin{args.n_min}_vr{args.var_ratio}'
+    run_dir = os.path.join(args.output, run_name)
+    os.makedirs(run_dir, exist_ok=True)
+
+    # Save hyperparameters
+    hyperparams = {
+        'num_live': args.num_live,
+        'max_iterations': args.max_iterations,
+        'dlogZ': args.dlogZ,
+        'n_particles': args.n_particles,
+        'n_min': args.n_min,
+        'var_ratio': args.var_ratio,
+        'n_bins': args.n_bins,
+        'min_count': args.min_count,
+    }
+    with open(os.path.join(run_dir, 'hyperparameters.json'), 'w') as f:
+        json.dump(hyperparams, f, indent=2)
 
     # Load data
     dict_data = load_stream_data(args.csv, n_bins=args.n_bins, min_count=args.min_count)
     print(f'Loaded {len(dict_data["theta"])} data points from {args.csv}')
 
-    # Setup
-    if args.triaxial:
-        ndim = 16
-        prior_fn = prior_transform_tri
-        mode = 'triaxial'
-    else:
-        ndim = 14
-        prior_fn = prior_transform_axi
-        mode = 'axisymmetric'
-
-    print(f'Fitting {mode} model: ndim={ndim}, nlive={args.nlive}, '
-          f'n_particles={args.n_particles}, n_min={args.n_min}, var_ratio={args.var_ratio}')
+    mode = 'triaxial' if args.triaxial else 'axisymmetric'
+    print(f'Fitting {mode} model with BlackJAX NS on {jax.devices()[0]}')
+    print(f'Run directory: {run_dir}')
 
     # Fit
-    dict_results = dynesty_fit(dict_data, logl, prior_fn, ndim,
-                               n_particles=args.n_particles, n_min=args.n_min,
-                               var_ratio=args.var_ratio, nlive=args.nlive,
-                               triaxial=args.triaxial)
+    dict_results = blackjax_ns_fit(
+        dict_data, n_particles=args.n_particles, n_min=args.n_min,
+        var_ratio=args.var_ratio, num_live=args.num_live,
+        max_iterations=args.max_iterations, dlogZ_threshold=args.dlogZ,
+        triaxial=args.triaxial)
 
     # Save results
-    with open(os.path.join(args.output, 'dict_results.pkl'), 'wb') as f:
+    with open(os.path.join(run_dir, 'dict_results.pkl'), 'wb') as f:
         pickle.dump(dict_results, f)
-    with open(os.path.join(args.output, 'dict_data.pkl'), 'wb') as f:
+    with open(os.path.join(run_dir, 'dict_data.pkl'), 'wb') as f:
         pickle.dump(dict_data, f)
-    print(f'Results saved to {args.output}')
+
+    print(f'Results saved to {run_dir}')
+    print(f'log Z = {dict_results["log_Z"]:.2f}')
+    print(f'ESS = {dict_results["ESS"]:.0f}')
 
     # Plots
-    plot_corner(dict_results, args.output, triaxial=args.triaxial)
-    plot_best_fit(dict_data, dict_results, args.output, args.n_particles, triaxial=args.triaxial)
-    plot_flattening(dict_results, args.output, triaxial=args.triaxial)
+    plot_corner(dict_results, run_dir, triaxial=args.triaxial)
+    plot_best_fit(dict_data, dict_results, run_dir, args.n_particles, triaxial=args.triaxial)
+    plot_flattening(dict_results, run_dir, triaxial=args.triaxial)
     print('Plots saved')
