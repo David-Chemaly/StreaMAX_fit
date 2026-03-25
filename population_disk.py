@@ -43,7 +43,7 @@ def disk_to_halo_mass_ratio_r(r, Md, a, b, M0_nfw, rs_nfw):
     return Mdisk / Mhalo
 
 if __name__ == "__main__":
-    PATH_DATA = f'/data/dc824-2/MockStreamsDiskEdgeOn06Rmin'
+    PATH_DATA = f'/data/dc824-2/MockStreamsDiskEdgeOn02Rmin'
     N = 25
 
     MSE_list = []
