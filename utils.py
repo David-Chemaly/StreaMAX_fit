@@ -15,17 +15,19 @@ def get_q(dirx, diry, dirz, q_min=0.5, q_max=1.5):
 
 def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=True, triaxial=False):
     if triaxial:
-        logM, Rs, p, q, dirx, diry, dirz, logm, rs, x0, z0, vx0, vy0, vz0, time = params[:15]
+        logM, Rs, p, q, dirx, diry, dirz, logm, rs, x0, z0, vx0, vy0, vz0, time, roll = params[:16]
         a, b, c = 1.0, p, q
     else:
         logM, Rs, dirx, diry, dirz, logm, rs, x0, z0, vx0, vy0, vz0, time = params[:13]
         q = get_q(dirx, diry, dirz)
         a, b, c = 1.0, 1.0, q
+        roll = 0.0
 
     type_host   = 'NFW'
     params_host = {'logM': logM, 'Rs': Rs,
                     'a': a, 'b': b, 'c': c,
                     'dirx': dirx, 'diry': diry, 'dirz': dirz,
+                    'roll': roll,
                     'x_origin': 0.0, 'y_origin': 0.0, 'z_origin': 0.0}
 
     type_sat   = 'Plummer'

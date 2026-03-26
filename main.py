@@ -20,7 +20,7 @@ from fit import dynesty_fit
 LABELS_AXI = ['logM', 'Rs', 'dirx', 'diry', 'dirz',
               'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
 LABELS_TRI = ['logM', 'Rs', 'p', 'q', 'dirx', 'diry', 'dirz',
-              'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
+              'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'roll', 'sig']
 
 
 def load_stream_data(csv_path, theta_min=-2 * np.pi, theta_max=2 * np.pi, n_bins=36, min_count=3):
@@ -149,7 +149,7 @@ def plot_flattening(dict_results, path, triaxial=False):
 
         fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-        axes[0].hist(p_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.0))
+        axes[0].hist(p_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
         axes[0].axvline(np.median(p_samps), color='blue', ls='--', lw=2)
         axes[0].axvline(np.percentile(p_samps, 16), color='blue', ls=':', lw=2)
         axes[0].axvline(np.percentile(p_samps, 84), color='blue', ls=':', lw=2)
@@ -157,7 +157,7 @@ def plot_flattening(dict_results, path, triaxial=False):
         axes[0].set_xlabel('p = b/a')
         axes[0].set_ylabel('Density')
 
-        axes[1].hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.0))
+        axes[1].hist(q_samps, bins=30, density=True, alpha=0.7, color='blue', range=(0.5, 1.5))
         axes[1].axvline(np.median(q_samps), color='blue', ls='--', lw=2)
         axes[1].axvline(np.percentile(q_samps, 16), color='blue', ls=':', lw=2)
         axes[1].axvline(np.percentile(q_samps, 84), color='blue', ls=':', lw=2)
@@ -166,11 +166,11 @@ def plot_flattening(dict_results, path, triaxial=False):
         axes[1].set_ylabel('Density')
 
         axes[2].scatter(p_samps, q_samps, s=1, alpha=0.2, color='blue')
-        axes[2].plot([0.5, 1.0], [0.5, 1.0], 'k--', lw=1)
+        axes[2].plot([0.5, 1.5], [0.5, 1.5], 'k--', lw=1)
         axes[2].set_xlabel('p = b/a')
         axes[2].set_ylabel('q = c/a')
-        axes[2].set_xlim(0.5, 1.0)
-        axes[2].set_ylim(0.5, 1.0)
+        axes[2].set_xlim(0.5, 1.5)
+        axes[2].set_ylim(0.5, 1.5)
         axes[2].set_aspect('equal')
 
     else:
@@ -203,6 +203,7 @@ if __name__ == "__main__":
     parser.add_argument('--min-count', type=int, default=3, help='Minimum particle count per data bin (default: 3)')
     parser.add_argument('--theta_min', type=float, default=-2, help='Minimum theta for binning factor of pi (default: -2)')
     parser.add_argument('--theta_max', type=float, default=2, help='Maximum theta for binning factor of pi (default: 2)')
+    parser.add_argument('--max-aspect', type=float, default=1.5, help='Max aspect ratio for triaxial cutoff (default: 1.5)')
     args = parser.parse_args()
 
     # Build run subdirectory from hyperparameters
@@ -230,7 +231,7 @@ if __name__ == "__main__":
 
     # Setup
     if args.triaxial:
-        ndim = 16
+        ndim = 17
         prior_fn = prior_transform_tri
         mode = 'triaxial'
     else:
@@ -246,7 +247,7 @@ if __name__ == "__main__":
     dict_results = dynesty_fit(dict_data, logl, prior_fn, ndim,
                                n_particles=args.n_particles, n_min=args.n_min,
                                var_ratio=args.var_ratio, nlive=args.nlive,
-                               triaxial=args.triaxial)
+                               triaxial=args.triaxial, max_aspect=args.max_aspect)
 
     # Save results
     with open(os.path.join(run_dir, 'dict_results.pkl'), 'wb') as f:

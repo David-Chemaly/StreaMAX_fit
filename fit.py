@@ -5,10 +5,10 @@ import multiprocessing as mp
 import dynesty
 import dynesty.utils as dyut
 
-def dynesty_fit(dict_data, logl_fn, prior_fn, ndim, n_particles=10000, n_min=101, var_ratio=9.0, nlive=2000, triaxial=False):
+def dynesty_fit(dict_data, logl_fn, prior_fn, ndim, n_particles=10000, n_min=101, var_ratio=9.0, nlive=2000, triaxial=False, max_aspect=1.5):
     nthreads = os.cpu_count()
     mp.set_start_method("spawn", force=True)
-    logl_args = (dict_data, n_particles, n_min, var_ratio, triaxial)
+    logl_args = (dict_data, n_particles, n_min, var_ratio, triaxial, max_aspect)
     with mp.Pool(nthreads) as poo:
         dns = dynesty.DynamicNestedSampler(logl_fn,
                                 prior_fn,

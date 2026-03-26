@@ -36,16 +36,16 @@ def prior_transform_axi(p):
     ])
 
 def prior_transform_tri(p):
-    # ndim = 16
+    # ndim = 17
     logM, Rs, u_p, u_q, dirx, diry, dirz, \
-    logm, rs, x0, z0, vx0, vy0, vz0, time, sig = p
+    logm, rs, x0, z0, vx0, vy0, vz0, time, u_roll, sig = p
 
     logM1 = 11 + 3 * logM
     Rs1   = 5 + 20 * Rs
 
-    # Axis ratios: enforce 1 >= p >= q >= 0.5
-    p1 = 0.5 + 0.5 * u_p
-    q1 = 0.5 + (p1 - 0.5) * u_q
+    # Axis ratios: independent U(0.5, 1.5), ordering enforced in likelihood
+    p1 = 0.5 + 1.0 * u_p
+    q1 = 0.5 + 1.0 * u_q
 
     # Orientation (same as axisymmetric: direction of c-axis)
     dirx1 = jax.scipy.special.ndtri(dirx)
@@ -63,11 +63,15 @@ def prior_transform_tri(p):
     vz1 = jax.scipy.special.ndtri(vz0) * 250
 
     time1 = 1 + 3 * time
+
+    # Roll angle around c-axis: U(0, pi), pi-symmetry of ellipsoid
+    roll1 = jnp.pi * u_roll
+
     sig1  = 25 * sig
 
     return jnp.array([
         logM1, Rs1, p1, q1, dirx1, diry1, dirz1,
         logm1, rs1,
         x1, z1, vx1, vy1, vz1,
-        time1, sig1,
+        time1, roll1, sig1,
     ])
