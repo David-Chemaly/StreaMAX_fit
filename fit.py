@@ -45,16 +45,26 @@ def blackjax_ns_fit(dict_data, n_particles=10000, n_min=3, var_ratio=9.0,
     )
     state = sampler.init(positions)
 
-    # Run with progress bar
-    dead_list = []
+    # JIT-compile the step function — critical for GPU performance
+    step_fn = jax.jit(sampler.step)
+
+    # Warm up JIT (first call triggers compilation)
     print(f'Nested sampling: {num_live} live points, {ndim}D, '
           f'{num_inner_steps} inner steps, dlogZ threshold={dlogZ_threshold}')
-    t0 = timer.time()
+    print('JIT compiling step function (one-time cost)...')
+    t_jit = timer.time()
+    key, warmup_key = random.split(key)
+    state, info = step_fn(warmup_key, state)
+    jax.block_until_ready(state)
+    dead_list = [info]
+    print(f'JIT compilation done in {timer.time() - t_jit:.1f}s')
 
-    pbar = tqdm(range(max_iterations), desc='NS')
+    # Run with progress bar
+    t0 = timer.time()
+    pbar = tqdm(range(1, max_iterations), desc='NS')
     for i in pbar:
         key = random.fold_in(key, i)
-        state, info = sampler.step(key, state)
+        state, info = step_fn(key, state)
         dead_list.append(info)
 
         if i > 0 and i % 100 == 0:

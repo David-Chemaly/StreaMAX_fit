@@ -8,7 +8,6 @@ dependencies = [
     "jax",
     "jaxlib",
     "numpy",
-    "dynesty",
     "corner",
     "matplotlib",
     "astropy",
