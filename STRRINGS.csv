@@ -1,0 +1,37 @@
+Table 1
+Name,Elisabeth,sigma_ratio,State,N,N per point,Var ratio,v,v_err,SNR,mc_quality,,v_host,v_err_host
+ESO079-003_GROUP_factor2.5_pixscale0.6,best,78.6548445079597,done!,18000,1000,9,nan,,,,,,
+ESO298-016_factor2.5_pixscale0.6,best,65.6983672988516,done!,24000,2000,9,nan,,,,,,
+ESO356-012_factor2.5_pixscale0.6,best,53.9535858798986,done!,25500,1500,9,5071.1,6.1,9.7,good,,5138,45
+IC0120_factor2.5_pixscale0.6,yes,59.807268813789,done!,49500,1500,9,4590.5,111.2,1.7,bad,,4806,17
+IC1124_factor2.5_pixscale0.6,no,66.4862840260747,done!,13500,1500,9,,,,,,,
+IC1657_GROUP_factor10.0_pixscale0.6,yes,82.5042639532514,done!,37500,1500,9,3547.4,26.9,6.5,good,,3583,4
+NGC0804_factor3.0_pixscale0.6,yes,64.8401241274388,done!,57000,1500,9,,,,,,,
+NGC1084_GROUP_factor2.5_pixscale0.6,no,999,to do,73500,1500,4,1326.4,22,5,good,gotta change the track,1411,1
+NGC1121_factor6.5_pixscale0.6,best,999,to do,112500,1500,4,nan,,,,give up? Ask Denis… or also change the track,,
+NGC1162_factor2.5_pixscale0.6,yes,69.8733726685618,done!,42000,1500,9,3870.6,16.7,4.7,good,,3939,24
+NGC2769_factor2.5_pixscale0.6,yes,36.2689301528355,done!,12000,1000,9,,,,,,,
+NGC3041_factor2.5_pixscale0.6,yes,90.5422801364174,done!,10500,1500,9,1534.1,29.1,2.8,good,,1411,1
+NGC4256_GROUP_factor22.0_pixscale0.6,yes,87.6939547145669,done!,56000,2000,9,,,,,,,
+NGC4388_GROUP_factor16.0_pixscale0.6,no,81.9477996710781,done!,16500,1500,9,,,,,,,
+NGC4632_factor2.5_pixscale0.6,best,51.4477605764291,done!,21000,1500,9,,,,,,,
+NGC4686_factor2.5_pixscale0.6,yes,45.471096843212,done!,16500,1500,9,,,,,,,
+NGC5055_GROUP_factor75.0_pixscale0.6,no,68.3424850137285,done!,14000,1000,9,,,,,,,
+NGC5263_factor2.5_pixscale0.6,yes,63.8071781353372,done!,42000,1500,9,,,,,,,
+NGC5387_factor2.5_pixscale0.6,yes,31.6920759151593,done!,22500,1500,9,,,,,REJECT,,
+NGC5513_GROUP_factor7.0_pixscale0.6,no,89.1230034137013,done!,22500,1500,9,,,,,,,
+NGC5907_factor2.5_pixscale0.6,yes,80.2717060686182,done!,25500,1500,9,,,,,,,
+PGC000902_factor4.0_pixscale0.6,best,65.1711870424395,to do,16500,Transform,9,5331.2,11.1,8.8,good,redo with var 4 and 1500 points,5404,11
+PGC006791_factor2.5_pixscale0.6,yes,89.7456172294619,done!,12000,1500,9,5393.3,51,2.5,good,,5378,34
+PGC021008_factor2.5_pixscale0.6,yes,999,done!,46500,1500,9,,,,,REJECT,,
+PGC039258_factor2.5_pixscale0.6,best,41.3816851539837,done!,39000,1500,4,,,,,,,
+PGC1001085_factor3.5_pixscale0.6,best,76.3953085222883,done!,46000,1000,9,,,,,,,
+PGC1092512_factor2.5_pixscale0.6,yes,55.4591005444492,to do,49500,Transform,9,4862.5,11.3,5.5,good,Redo on bigger machine,5180,45
+PGC3092153_factor2.5_pixscale0.6,no,70.5537484919291,done!,24000,1500,9,,,,,,,
+PGC430221_factor4.0_pixscale0.6,yes,71.8608426004377,done!,16000,1000,9,,,,,REJECT,,
+PGC938075_factor4.5_pixscale0.6,no,99.3332290969212,to do,61500,Transform,4,1511,18.8,3.8,good,redo with less points,1544.67,1
+UGC01245_factor4.5_pixscale0.6,yes,80.0965820919567,done!,16000,minErr_0.0,9,5191.8,33.5,8.9,good,,5220,29
+UGC01424_factor3.0_pixscale0.6,yes,82.3894613701681,done!,52000,2000,4,5069.5,74.4,3.5,bad,,5156,46
+UGC01970_factor3.5_pixscale0.6,no,64.873489847899,done!,24000,1000,9,nan,,,,,,
+UGC08717_factor3.0_pixscale0.6,yes,70.8158243824234,done!,72000,1500,4,,,,,,,
+UGC09239_factor2.5_pixscale0.6,best,61.3129456628897,done!,33000,1500,9,,,,,,,
