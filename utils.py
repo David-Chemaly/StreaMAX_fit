@@ -13,7 +13,7 @@ def get_q(dirx, diry, dirz, q_min=0.5, q_max=1.5):
     q = (q_max - q_min) * q + q_min
     return q
 
-def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=True, triaxial=False):
+def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=False, triaxial=False):
     if triaxial:
         logM, Rs, p, q, dirx, diry, dirz, logm, rs, x0, z0, vx0, vy0, vz0, time = params[:15]
         a, b, c = 1.0, p, q
