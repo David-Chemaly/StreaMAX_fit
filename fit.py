@@ -3,7 +3,7 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 import jax.random as random
-from tqdm import tqdm
+import tqdm
 
 import blackjax
 from blackjax.ns.utils import finalise, sample as ns_sample, ess as ns_ess
@@ -13,8 +13,8 @@ from llikelihood import logl
 
 
 def blackjax_ns_fit(dict_data, n_particles=10000, n_min=3, var_ratio=9.0,
-                    num_live=500, max_iterations=50000, num_inner_steps=None,
-                    dlogZ_threshold=0.01, triaxial=False):
+                    num_live=500, num_inner_steps=None,
+                    dlogZ_threshold=-3, triaxial=False):
     jax_data = {k: jnp.array(v) for k, v in dict_data.items()}
 
     if triaxial:
@@ -29,6 +29,8 @@ def blackjax_ns_fit(dict_data, n_particles=10000, n_min=3, var_ratio=9.0,
     if num_inner_steps is None:
         num_inner_steps = ndim * 5
 
+    num_delete = num_live // 2
+
     def loglikelihood_fn(params):
         return logl(params, jax_data, n_particles, n_min, var_ratio, triaxial)
 
@@ -41,44 +43,50 @@ def blackjax_ns_fit(dict_data, n_particles=10000, n_min=3, var_ratio=9.0,
     sampler = blackjax.nss(
         logprior_fn=logprior_fn,
         loglikelihood_fn=loglikelihood_fn,
+        num_delete=num_delete,
         num_inner_steps=num_inner_steps,
     )
-    state = sampler.init(positions)
-
-    # JIT-compile the step function — critical for GPU performance
+    init_fn = jax.jit(sampler.init)
     step_fn = jax.jit(sampler.step)
 
-    # Warm up JIT (first call triggers compilation)
     print(f'Nested sampling: {num_live} live points, {ndim}D, '
-          f'{num_inner_steps} inner steps, dlogZ threshold={dlogZ_threshold}')
+          f'{num_inner_steps} inner steps, num_delete={num_delete}')
+
+    # Initialize
+    print('JIT compiling init...')
+    t_jit = timer.time()
+    state = init_fn(positions)
+    jax.block_until_ready(state)
+    print(f'Init done in {timer.time() - t_jit:.1f}s')
+
+    # Warm up step JIT
     print('JIT compiling step function (one-time cost)...')
     t_jit = timer.time()
     key, warmup_key = random.split(key)
-    state, info = step_fn(warmup_key, state)
+    state, dead_info = step_fn(warmup_key, state)
     jax.block_until_ready(state)
-    dead_list = [info]
+    dead_list = [dead_info]
     print(f'JIT compilation done in {timer.time() - t_jit:.1f}s')
 
-    # Run with progress bar
+    # Run until convergence
     t0 = timer.time()
-    pbar = tqdm(range(1, max_iterations), desc='NS')
-    for i in pbar:
-        key = random.fold_in(key, i)
-        state, info = step_fn(key, state)
-        dead_list.append(info)
+    n_dead = num_delete  # from warmup step
+    with tqdm.tqdm(desc='Dead points', unit=' dead points') as pbar:
+        while not (state.integrator.logZ_live - state.integrator.logZ < dlogZ_threshold):
+            key, subkey = random.split(key)
+            state, dead_info = step_fn(subkey, state)
+            dead_list.append(dead_info)
+            n_dead += num_delete
+            pbar.update(num_delete)
 
-        if i > 0 and i % 100 == 0:
             logZ = float(state.integrator.logZ)
             logZ_live = float(state.integrator.logZ_live)
-            logZ_total = float(jnp.logaddexp(state.integrator.logZ, state.integrator.logZ_live))
-            dlogZ = logZ_total - logZ
-            pbar.set_postfix(logZ=f'{logZ_total:.1f}', dlogZ=f'{dlogZ:.4f}')
-            if dlogZ < dlogZ_threshold:
-                print(f'\nConverged at iteration {i}: dlogZ={dlogZ:.6f}')
-                break
+            dlogZ_current = logZ_live - logZ
+            pbar.set_postfix(logZ=f'{logZ:.1f}', logZ_live=f'{logZ_live:.1f}',
+                             dlogZ=f'{dlogZ_current:.2f}')
 
     t_elapsed = timer.time() - t0
-    print(f'Completed in {t_elapsed:.1f}s ({t_elapsed/60:.1f} min), {i+1} iterations')
+    print(f'Converged: {n_dead} dead points in {t_elapsed:.1f}s ({t_elapsed/60:.1f} min)')
 
     # Finalize: combine dead particles + remaining live points
     final_info = finalise(state, dead_list)
