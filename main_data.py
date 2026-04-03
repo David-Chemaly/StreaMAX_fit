@@ -159,14 +159,14 @@ if __name__ == "__main__":
                 pickle.dump(dict_results, f)
 
             # Plot and Save corner plot
-            labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig', 'sig_v']
+            labels = ['logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs', 'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig']
             figure = corner.corner(dict_results['samps'], 
                         labels=labels,
                         color='blue',
                         quantiles=[0.16, 0.5, 0.84],
                         show_titles=True, 
                         title_kwargs={"fontsize": 16},
-                        truths=[M_halo, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, dict_data['vz'], np.nan, np.nan, np.nan],
+                        truths=[M_halo, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, dict_data['vz'], np.nan, np.nan],
                         truth_color='red',
                         )
             figure.savefig(f'{new_PATH_DATA}/corner_plot.pdf')

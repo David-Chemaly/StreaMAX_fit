@@ -19,7 +19,7 @@ def prior_transform(p):
     rs1   = 1 + 2 * rs
 
     x1 = jax.scipy.special.ndtri(0.5 + x0 / 2) * 150
-    z1 = jax.scipy.special.ndtri(0.5 + z0 / 2) * 150
+    z1 = jax.scipy.special.ndtri(z0) * 150
 
     vx1 = jax.scipy.special.ndtri(vx0) * 250
     vy1 = jax.scipy.special.ndtri(0.5 + vy0 / 2) * 250
