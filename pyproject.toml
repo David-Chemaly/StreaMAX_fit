@@ -1,0 +1,20 @@
+[project]
+name = "streamax-fit"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "streamax",
+    "jax>=0.9",
+    "jaxlib>=0.9",
+    "numpy",
+    "pandas",
+    "scipy",
+    "matplotlib",
+    "corner",
+    "dynesty",
+    "astropy",
+    "tqdm",
+]
+
+[tool.uv.sources]
+streamax = { path = "../StreaMAX", editable = true }

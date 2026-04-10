@@ -1,1 +1,5 @@
 play.ipynb
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/

@@ -1,37 +1,36 @@
-Table 1
-Name,Elisabeth,sigma_ratio,State,N,N per point,Var ratio,v,v_err,SNR,mc_quality,,v_host,v_err_host
-ESO079-003_GROUP_factor2.5_pixscale0.6,best,78.6548445079597,done!,18000,1000,9,nan,,,,,,
-ESO298-016_factor2.5_pixscale0.6,best,65.6983672988516,done!,24000,2000,9,nan,,,,,,
-ESO356-012_factor2.5_pixscale0.6,best,53.9535858798986,done!,25500,1500,9,5071.1,6.1,9.7,good,,5138,45
-IC0120_factor2.5_pixscale0.6,yes,59.807268813789,done!,49500,1500,9,4590.5,111.2,1.7,bad,,4806,17
-IC1124_factor2.5_pixscale0.6,no,66.4862840260747,done!,13500,1500,9,,,,,,,
-IC1657_GROUP_factor10.0_pixscale0.6,yes,82.5042639532514,done!,37500,1500,9,3547.4,26.9,6.5,good,,3583,4
-NGC0804_factor3.0_pixscale0.6,yes,64.8401241274388,done!,57000,1500,9,,,,,,,
-NGC1084_GROUP_factor2.5_pixscale0.6,no,999,to do,73500,1500,4,1326.4,22,5,good,gotta change the track,1411,1
-NGC1121_factor6.5_pixscale0.6,best,999,to do,112500,1500,4,nan,,,,give up? Ask Denis… or also change the track,,
-NGC1162_factor2.5_pixscale0.6,yes,69.8733726685618,done!,42000,1500,9,3870.6,16.7,4.7,good,,3939,24
-NGC2769_factor2.5_pixscale0.6,yes,36.2689301528355,done!,12000,1000,9,,,,,,,
-NGC3041_factor2.5_pixscale0.6,yes,90.5422801364174,done!,10500,1500,9,1534.1,29.1,2.8,good,,1411,1
-NGC4256_GROUP_factor22.0_pixscale0.6,yes,87.6939547145669,done!,56000,2000,9,,,,,,,
-NGC4388_GROUP_factor16.0_pixscale0.6,no,81.9477996710781,done!,16500,1500,9,,,,,,,
-NGC4632_factor2.5_pixscale0.6,best,51.4477605764291,done!,21000,1500,9,,,,,,,
-NGC4686_factor2.5_pixscale0.6,yes,45.471096843212,done!,16500,1500,9,,,,,,,
-NGC5055_GROUP_factor75.0_pixscale0.6,no,68.3424850137285,done!,14000,1000,9,,,,,,,
-NGC5263_factor2.5_pixscale0.6,yes,63.8071781353372,done!,42000,1500,9,,,,,,,
-NGC5387_factor2.5_pixscale0.6,yes,31.6920759151593,done!,22500,1500,9,,,,,REJECT,,
-NGC5513_GROUP_factor7.0_pixscale0.6,no,89.1230034137013,done!,22500,1500,9,,,,,,,
-NGC5907_factor2.5_pixscale0.6,yes,80.2717060686182,done!,25500,1500,9,,,,,,,
-PGC000902_factor4.0_pixscale0.6,best,65.1711870424395,to do,16500,Transform,9,5331.2,11.1,8.8,good,redo with var 4 and 1500 points,5404,11
-PGC006791_factor2.5_pixscale0.6,yes,89.7456172294619,done!,12000,1500,9,5393.3,51,2.5,good,,5378,34
-PGC021008_factor2.5_pixscale0.6,yes,999,done!,46500,1500,9,,,,,REJECT,,
-PGC039258_factor2.5_pixscale0.6,best,41.3816851539837,done!,39000,1500,4,,,,,,,
-PGC1001085_factor3.5_pixscale0.6,best,76.3953085222883,done!,46000,1000,9,,,,,,,
-PGC1092512_factor2.5_pixscale0.6,yes,55.4591005444492,to do,49500,Transform,9,4862.5,11.3,5.5,good,Redo on bigger machine,5180,45
-PGC3092153_factor2.5_pixscale0.6,no,70.5537484919291,done!,24000,1500,9,,,,,,,
-PGC430221_factor4.0_pixscale0.6,yes,71.8608426004377,done!,16000,1000,9,,,,,REJECT,,
-PGC938075_factor4.5_pixscale0.6,no,99.3332290969212,to do,61500,Transform,4,1511,18.8,3.8,good,redo with less points,1544.67,1
-UGC01245_factor4.5_pixscale0.6,yes,80.0965820919567,done!,16000,minErr_0.0,9,5191.8,33.5,8.9,good,,5220,29
-UGC01424_factor3.0_pixscale0.6,yes,82.3894613701681,done!,52000,2000,4,5069.5,74.4,3.5,bad,,5156,46
-UGC01970_factor3.5_pixscale0.6,no,64.873489847899,done!,24000,1000,9,nan,,,,,,
-UGC08717_factor3.0_pixscale0.6,yes,70.8158243824234,done!,72000,1500,4,,,,,,,
-UGC09239_factor2.5_pixscale0.6,best,61.3129456628897,done!,33000,1500,9,,,,,,,
+Name,Elisabeth,sigma_ratio,N,Var ratio,v,v_err,SNR,mc_quality,v_host,v_err_host,v_host_ref,velocity_notes,logMstar,logMstar_err,Mstar_ref,logMtotal,logMtotal_err,Mtotal_ref,mass_notes
+ESO079-003_GROUP_factor2.5_pixscale0.6,best,78.6548445079597,18000,9,nan,,,,,,,,,,,,,,
+ESO298-016_factor2.5_pixscale0.6,best,65.6983672988516,24000,9,nan,,,,,,,,,,,,,,
+ESO356-012_factor2.5_pixscale0.6,best,53.9535858798986,25500,9,5071.1,6.1,9.7,good,5112.0,6.0,HyperLEDA; HyperLEDA=5112.0±6.0; SIMBAD cz=5155.32±,HyperLEDA and SIMBAD are consistent; HyperLEDA provides the tighter explicit uncertainty.,9.78,0.14,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",11.37,0.21,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+IC0120_factor2.5_pixscale0.6,yes,59.807268813789,49500,9,4590.5,111.2,1.7,bad,4806.0,17.0,Existing adopted value; HyperLEDA=4788.0±34.0; SIMBAD cz=4707.0±,Catalogs are noisy/inconsistent here; retained the pre-existing adopted value pending a deeper object-by-object paper search.,10.32,0.14,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",11.74,0.24,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+IC1124_factor2.5_pixscale0.6,no,66.4862840260747,13500,9,,,,,,,,,,,,,,,
+IC1657_GROUP_factor10.0_pixscale0.6,yes,82.5042639532514,37500,9,3547.4,26.9,6.5,good,3583.0,4.0,Existing adopted value; HyperLEDA=3572.0±4.0; SIMBAD cz=3503.9173±150.0,Retained the existing value; it agrees with the tighter catalog family and is much better than the loose SIMBAD entry.,10.67,0.16,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",12.23,0.38,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+NGC0804_factor3.0_pixscale0.6,yes,64.8401241274388,57000,9,,,,,,,,,,,,,,,
+NGC1084_GROUP_factor2.5_pixscale0.6,no,999,73500,4,1326.4,22,5,good,1411.0,1.0,Existing adopted value; HyperLEDA=1422.0±11.0; SIMBAD cz=1403.69±,Current adopted value sits between HyperLEDA and SIMBAD and is already tighter than either catalog summary.,10.31,0.15,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",11.73,0.24,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+NGC1121_factor6.5_pixscale0.6,best,999,112500,4,nan,,,,,,,,,,,,,,
+NGC1162_factor2.5_pixscale0.6,yes,69.8733726685618,42000,9,3870.6,16.7,4.7,good,3936.0,16.0,HyperLEDA; HyperLEDA=3936.0±16.0; SIMBAD cz=3920.09±26.08,HyperLEDA remains the tighter catalog value and was kept.,10.83,0.13,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",12.61,0.37,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+NGC2769_factor2.5_pixscale0.6,yes,36.2689301528355,12000,9,,,,,,,,,,,,,,,
+NGC3041_factor2.5_pixscale0.6,yes,90.5422801364174,10500,9,1534.1,29.1,2.8,good,1411.0,1.0,Existing adopted value; HyperLEDA=1403.0±4.0; SIMBAD cz=1420.36±3.0 2022ApJS..261...21Y,There is a real catalog disagreement here; retained the prior adopted value rather than overwrite with a single discordant catalog measurement.,10.33,0.15,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",11.75,0.25,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+NGC4256_GROUP_factor22.0_pixscale0.6,yes,87.6939547145669,56000,9,,,,,,,,,,,,,,,
+NGC4388_GROUP_factor16.0_pixscale0.6,no,81.9477996710781,16500,9,,,,,,,,,,,,,,,
+NGC4632_factor2.5_pixscale0.6,best,51.4477605764291,21000,9,,,,,,,,,,,,,,,
+NGC4686_factor2.5_pixscale0.6,yes,45.471096843212,16500,9,,,,,,,,,,,,,,,
+NGC5055_GROUP_factor75.0_pixscale0.6,no,68.3424850137285,14000,9,,,,,,,,,,,,,,,
+NGC5263_factor2.5_pixscale0.6,yes,63.8071781353372,42000,9,,,,,,,,,,,,,,,
+NGC5387_factor2.5_pixscale0.6,yes,31.6920759151593,22500,9,5292.9,12.8,8.8,good,5219.0,3.0,HyperLEDA; HyperLEDA=5219.0±3.0; SIMBAD cz=5222.4±3.0 2012ApJS..203...21A,HyperLEDA and SIMBAD cz agree within 1 sigma; HyperLEDA value retained.,10.58,0.13,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",12.07,0.3,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+NGC5513_GROUP_factor7.0_pixscale0.6,no,89.1230034137013,22500,9,5003.4,35.9,2.9,Good,5014.0,2.0,HyperLEDA; HyperLEDA=5014.0±2.0; SIMBAD cz=5012.5±3.0 2020ApJS..249....3A,HyperLEDA and SIMBAD cz agree closely; HyperLEDA retained because it is slightly tighter.,11.09,0.13,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",13.26,0.39,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+NGC5907_factor2.5_pixscale0.6,yes,80.2717060686182,25500,9,,,,,,,,,,,,,,,
+PGC000902_factor4.0_pixscale0.6,best,65.1711870424395,48000,9,5331.2,11.1,8.8,good,5404.0,11.0,Existing adopted value; HyperLEDA=5376.0±26.0; SIMBAD cz=5454.61±,"Retained the existing adopted value, which is tighter than HyperLEDA and consistent with external literature cross-checks.",10.51,0.13,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",11.96,0.28,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+PGC006791_factor2.5_pixscale0.6,yes,89.7456172294619,12000,9,5393.3,51,2.5,good,5384.0,5.0,HyperLEDA; HyperLEDA=5384.0±5.0; SIMBAD cz=5447.0±,HyperLEDA remains the only precise catalog value recovered in this pass.,10.74,0.13,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",12.39,0.35,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+PGC021008_factor2.5_pixscale0.6,yes,999,46500,9,,,,,,,,,,,,,,,
+PGC039258_factor2.5_pixscale0.6,best,41.3816851539837,39000,4,nan,,,,,,,,,,,,,,
+PGC1001085_factor3.5_pixscale0.6,best,76.3953085222883,46000,9,5450.4,12.5,5.2,good,5487.21,11.0,SIMBAD cz / 2011MNRAS.416.2840L; HyperLEDA=5437.0±39.0; SIMBAD cz=5487.21±11.0 2011MNRAS.416.2840L,Updated from the earlier HyperLEDA-based value because the SIMBAD redshift entry provides a much tighter explicit cz uncertainty.,10.41,0.13,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",11.84,0.25,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+PGC1092512_factor2.5_pixscale0.6,yes,55.4591005444492,49500,9,4862.5,11.3,5.5,good,5180.0,45.0,HyperLEDA / existing adopted value; HyperLEDA=5180.0±45.0; SIMBAD cz=5180.0±45.0,Both catalogs are effectively the same precision; retained the current value.,10.52,0.14,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",11.97,0.28,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+PGC3092153_factor2.5_pixscale0.6,no,70.5537484919291,24000,9,nan,,,,,,,,,,,,,,
+PGC430221_factor4.0_pixscale0.6,yes,71.8608426004377,16000,9,,,,,,,,,,,,,,,
+PGC938075_factor4.5_pixscale0.6,no,99.3332290969212,61500,4,1511,18.8,3.8,good,1544.67,1.0,Existing adopted value pending identity check; HyperLEDA=120.0±67.0; SIMBAD cz=120.0±55.0,"Catalog identity remains unresolved. External catalog matches do not support the current host velocity, so this row still needs manual object-level verification.",,,,,,,No robust mass added in this pass because host identity / catalog match remains uncertain.
+UGC01245_factor4.5_pixscale0.6,yes,80.0965820919567,16000,9,5191.8,33.5,8.9,good,5220.0,29.0,Existing adopted value; HyperLEDA=5080.0±30.0; SIMBAD cz=5177.12±83.94,Catalog values are inconsistent and not clearly better; retained the existing adopted value.,10.68,0.13,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",12.27,0.34,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+UGC01424_factor3.0_pixscale0.6,yes,82.3894613701681,52000,4,5069.5,74.4,3.5,bad,5152.0,46.0,HyperLEDA; HyperLEDA=5152.0±46.0; SIMBAD cz=5153.13±0.9 2002LEDA.........0P,"SIMBAD points back to an old LEDA entry with a much smaller quoted error, but HyperLEDA still reports a broad uncertainty. I kept the conservative value rather than over-tighten this row.",10.27,0.14,"K-band stellar mass from HyperLEDA K_t and modbest with M/L_K=0.6; McGaugh & Schombert 2014, AJ, 148, 77.",11.7,0.23,"Halo mass inferred from stellar mass via the z=0 stellar-to-halo mass relation; Moster et al. 2013, MNRAS, 428, 3121.","Estimated mass, not a direct galaxy-specific halo fit."
+UGC01970_factor3.5_pixscale0.6,no,64.873489847899,24000,9,nan,,,,,,,,,,,,,,
+UGC08717_factor3.0_pixscale0.6,yes,70.8158243824234,72000,4,,,,,,,,,,,,,,,
+UGC09239_factor2.5_pixscale0.6,best,61.3129456628897,33000,9,,,,,,,,,,,,,,,
