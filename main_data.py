@@ -42,6 +42,14 @@ def nice_name(name):
     return name.split("_factor")[0]
 
 
+def fit_results_path(path_out, name, ndim, n_particles, n_min, var_ratio, nlive):
+        output_dir = (
+            f'{path_out}/{name}/Plots_ndim{ndim}_Nparticles{n_particles}'
+            f'_Nmin{n_min}_VarRatio{var_ratio}_nlive{nlive}'
+        )
+        return output_dir, f'{output_dir}/dict_results.pkl'
+
+
 def get_host_logmass_truths(name, cfg, strings_catalogue_by_name=None, catalogue_index=None):
         # New estimate: logMtotal directly from STRRINGS csv
         log_mtotal_new = float(cfg.get('logMtotal', np.nan))
@@ -197,7 +205,19 @@ if __name__ == "__main__":
         dict_data['vz_theta'] = 0.0
         dict_data['vz_window'] = dict_data['bin_width']
 
-        new_PATH_DATA = f'{PATH_OUT}/{name}/Plots_ndim{ndim}_Nparticles{n_particles_i}_Nmin{n_min}_VarRatio{var_ratio_i}_nlive{nlive}'
+        new_PATH_DATA, results_path = fit_results_path(
+            PATH_OUT,
+            name,
+            ndim,
+            n_particles_i,
+            n_min,
+            var_ratio_i,
+            nlive,
+        )
+        if os.path.exists(new_PATH_DATA):
+            print(f"Skipping {name}: existing output folder found at {new_PATH_DATA}")
+            continue
+
         os.makedirs(new_PATH_DATA, exist_ok=True)
 
         M_halo_new, M_halo_old = get_host_logmass_truths(
@@ -209,7 +229,7 @@ if __name__ == "__main__":
 
         print(f'Fitting {name} with nlive={nlive} and fixed progenitor at center')
         dict_results = dynesty_fit(dict_data, logl_fn, prior_transform_fn, ndim, n_particles=n_particles_i, n_min=n_min, var_ratio=var_ratio_i, var_ratio_v=var_ratio_v, nlive=nlive)
-        with open(f'{new_PATH_DATA}/dict_results.pkl', 'wb') as f:
+        with open(results_path, 'wb') as f:
             pickle.dump(dict_results, f)
 
         # Plot and Save corner plot
