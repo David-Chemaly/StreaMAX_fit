@@ -42,10 +42,11 @@ def nice_name(name):
     return name.split("_factor")[0]
 
 
-def fit_results_path(path_out, name, ndim, n_particles, n_min, var_ratio, nlive):
+def fit_results_path(path_out, name, ndim, n_particles, n_min, var_ratio, nlive, v_host=None, v_err_host=None):
         output_dir = (
             f'{path_out}/{name}/Plots_ndim{ndim}_Nparticles{n_particles}'
             f'_Nmin{n_min}_VarRatio{var_ratio}_nlive{nlive}'
+            f'_vhost{v_host}_vhosterr{v_err_host}'
         )
         return output_dir, f'{output_dir}/dict_results.pkl'
 
@@ -162,6 +163,9 @@ if __name__ == "__main__":
     index = -1
     for name in tqdm(names, leave=True):
 
+        if name != 'ESO356-012_factor2.5_pixscale0.6':
+            continue
+
         if name in ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC021008_factor2.5_pixscale0.6']:
             print(f"Skipping {name} due to known issues.")
             continue
@@ -182,7 +186,7 @@ if __name__ == "__main__":
 
         n_particles_i = cfg.get('N', np.nan)
         if not (np.isfinite(n_particles_i) and n_particles_i > 0):
-            print(f"Skipping {name}: missing/invalid N in STRRINGS.xlsx")
+            print(f"Skipping {name}: missing/invalid N in STRRINGS.csv")
             continue
         n_particles_i = int(n_particles_i)
 
@@ -192,7 +196,7 @@ if __name__ == "__main__":
         v_host = cfg.get('v_host', np.nan)
         v_err_host = cfg.get('v_err_host', np.nan)
         if not (np.isfinite(v) and np.isfinite(v_err) and v_err > 0):
-            print(f"Skipping {name}: missing/invalid numeric v or v_err in STRRINGS.xlsx")
+            print(f"Skipping {name}: missing/invalid numeric v or v_err in STRRINGS.csv")
             continue
         if np.isfinite(v_host) and np.isfinite(v_err_host) and v_err_host > 0:
             vz = float(v) - float(v_host)
@@ -213,6 +217,8 @@ if __name__ == "__main__":
             n_min,
             var_ratio_i,
             nlive,
+            v_host=v_host,
+            v_err_host=v_err_host,
         )
         if os.path.exists(new_PATH_DATA):
             print(f"Skipping {name}: existing output folder found at {new_PATH_DATA}")

@@ -134,9 +134,9 @@ if __name__ == "__main__":
     nlive = 500
 
     PATH_DATA = '/data/dc824-2/SGA_Streams/for_pop'
-    STRINGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'STRRINGS.xlsx')
+    STRINGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'STRRINGS.csv')
 
-    df = pd.read_excel(STRINGS_PATH)
+    df = pd.read_csv(STRINGS_PATH)
     if args.filter == 'best':
         names = df[df['Elisabeth'] == 'best']['Name'].tolist()
     elif args.filter == 'yes':
