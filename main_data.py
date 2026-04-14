@@ -163,7 +163,7 @@ if __name__ == "__main__":
     index = -1
     for name in tqdm(names, leave=True):
 
-        if name != 'ESO356-012_factor2.5_pixscale0.6':
+        if name not in ['NGC5387_factor2.5_pixscale0.6', 'PGC1001085_factor3.5_pixscale0.6']:
             continue
 
         if name in ['NGC1084_GROUP_factor2.5_pixscale0.6', 'NGC1121_factor6.5_pixscale0.6', 'PGC021008_factor2.5_pixscale0.6']:
