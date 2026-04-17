@@ -7,8 +7,7 @@ old stream mock parametrisation is that velocity and time are sampled through
     log_alpha = log10(|v| / v_circ)
     log_tau   = log10(t * v_circ / r0)
 
-instead of directly sampling vx, vy, vz, and time.  The prior bounds are set
-in physical speed/time and converted to log_alpha/log_tau per sample.
+instead of directly sampling vx, vy, vz, and time.
 """
 
 import argparse
@@ -35,10 +34,12 @@ plt.rcParams.update({"font.size": 14})
 BAD_VAL = -1e15
 EPSILON = 1e-6
 DEFAULT_OUTPUT_ROOT = Path("/data/dc824-2/StreamUnif")
-SPEED_MIN_KPC_GYR = 1e-3
-SPEED_MAX_KPC_GYR = 1000.0
-TIME_MIN_GYR = 1.0
-TIME_MAX_GYR = 4.0
+LOG_ALPHA_MIN = -1.0
+LOG_ALPHA_MAX = 1.0
+LOG_TAU_MIN = 0.0
+LOG_TAU_MAX = 2.0
+Z0_MIN_KPC = 1e-3
+Z0_MAX_KPC = 50.0
 LIKELIHOOD_MODES = ("track", "track_los")
 
 LABELS = (
@@ -92,33 +93,12 @@ def prior_transform_unif(u):
     logm = 7.0 + 2.0 * u_logm
     rs = 0.5 + 2.5 * u_rs
     x0 = 10.0 + 70.0 * u_x0
-    z0 = -50.0 + 100.0 * u_z0
+    z0 = Z0_MIN_KPC + (Z0_MAX_KPC - Z0_MIN_KPC) * u_z0
     theta_v = jnp.arcsin(2.0 * u_theta_v - 1.0)
     phi_v = 2.0 * jnp.pi * u_phi_v
 
-    dirx = float(jnp.cos(theta_q) * jnp.cos(phi_q))
-    diry = float(jnp.cos(theta_q) * jnp.sin(phi_q))
-    dirz = float(jnp.sin(theta_q))
-    v_circ = oriented_nfw_circular_speed(
-        float(logM),
-        float(Rs),
-        float(x0),
-        0.0,
-        float(z0),
-        float(q),
-        dirx,
-        diry,
-        dirz,
-    )
-    v_circ = max(v_circ, EPSILON)
-    r0 = max(float(np.sqrt(float(x0) ** 2 + float(z0) ** 2)), EPSILON)
-
-    log_alpha_min = np.log10(SPEED_MIN_KPC_GYR / v_circ)
-    log_alpha_max = np.log10(SPEED_MAX_KPC_GYR / v_circ)
-    log_tau_min = np.log10(TIME_MIN_GYR * v_circ / r0)
-    log_tau_max = np.log10(TIME_MAX_GYR * v_circ / r0)
-    log_alpha = log_alpha_min + (log_alpha_max - log_alpha_min) * float(u_alpha)
-    log_tau = log_tau_min + (log_tau_max - log_tau_min) * float(u_tau)
+    log_alpha = LOG_ALPHA_MIN + (LOG_ALPHA_MAX - LOG_ALPHA_MIN) * u_alpha
+    log_tau = LOG_TAU_MIN + (LOG_TAU_MAX - LOG_TAU_MIN) * u_tau
     sig = 10.0 * u_sig
 
     return jnp.asarray(
@@ -381,7 +361,8 @@ def make_mock_data_stream(
 def find_mock_data_stream(seed, args):
     rng = np.random.default_rng(int(seed))
     for trial in range(args.truth_trials):
-        params = np.asarray(prior_transform_unif(rng.uniform(0.0, 1.0, size=NDIM)))
+        params = np.array(prior_transform_unif(rng.uniform(0.0, 1.0, size=NDIM)), copy=True)
+        params[-1] = 0.0
         dict_data = make_mock_data_stream(
             params,
             seed=seed,
@@ -763,9 +744,12 @@ def save_summary(path, mode, dict_data, dict_results):
         f.write(f"  vz_theta = {dict_data['vz_theta']:.6f} rad\n")
         f.write(f"  vz_window = {dict_data['vz_window']:.6f} rad\n")
         f.write(f"  vz_count = {dict_data['vz_count']}\n\n")
-        f.write("Physical prior bounds:\n")
-        f.write(f"  speed = [{SPEED_MIN_KPC_GYR:.6g}, {SPEED_MAX_KPC_GYR:.6g}] kpc/Gyr\n")
-        f.write(f"  time = [{TIME_MIN_GYR:.6g}, {TIME_MAX_GYR:.6g}] Gyr\n\n")
+        f.write("Scaled velocity/time prior bounds:\n")
+        f.write(f"  log_alpha = [{LOG_ALPHA_MIN:.6g}, {LOG_ALPHA_MAX:.6g}]\n")
+        f.write(f"  log_tau = [{LOG_TAU_MIN:.6g}, {LOG_TAU_MAX:.6g}]\n")
+        f.write(f"  z0 = [{Z0_MIN_KPC:.6g}, {Z0_MAX_KPC:.6g}] kpc\n")
+        f.write("  speed = 10**log_alpha * v_circ\n")
+        f.write("  time = 10**log_tau * r0 / v_circ\n\n")
         for idx, label in enumerate(LABELS):
             f.write(
                 f"{label:>10s}: truth={dict_data['params'][idx]: .6f} "
