@@ -810,6 +810,89 @@ def derived_sample_columns(samples):
     return np.asarray(derived)
 
 
+def save_diagnostics(path, dict_data, dict_results, n_effective_target):
+    """Post-fit diagnostics to flag under-sampling or a loose evidence cut."""
+    dns = dict_results.get("dns")
+    if dns is None:
+        return
+    res = dns.results
+
+    samps_raw = np.asarray(res.samples)
+    logl_raw = np.asarray(res.logl)
+    logwt = np.asarray(res.logwt)
+    logz = np.asarray(res.logz)
+    logzerr = np.asarray(res.logzerr)
+
+    w = np.exp(logwt - logz[-1])
+    w_norm = w / np.sum(w)
+    ess_weighted = float(1.0 / np.sum(w_norm ** 2))
+
+    samps_eq = np.asarray(dict_results["samps"])
+    logM_eq = samps_eq[:, 0]
+
+    bad_thresh = BAD_VAL / 1e3
+    bad_frac = float(np.mean(logl_raw < bad_thresh))
+
+    # logM is LABELS[0]; if it was fixed, it isn't in samps_raw. free_indices
+    # is sorted, so logM sits at raw column 0 whenever it is free.
+    free_indices = dict_results.get("free_indices")
+    logM_is_free = (free_indices is None) or (0 in free_indices)
+    unique_logM_raw = (
+        int(len(np.unique(np.round(samps_raw[:, 0], 4)))) if logM_is_free else None
+    )
+    unique_logM_eq = int(len(np.unique(np.round(logM_eq, 4))))
+
+    rng = np.random.default_rng(0)
+    idx = np.arange(len(logM_eq))
+    rng.shuffle(idx)
+    half = len(idx) // 2
+    a, b = logM_eq[idx[:half]], logM_eq[idx[half : 2 * half]]
+    median_a, median_b = float(np.median(a)), float(np.median(b))
+    std_a, std_b = float(np.std(a)), float(np.std(b))
+
+    # Pass/warn heuristics.
+    ess_ok = ess_weighted >= 0.8 * n_effective_target
+    logzerr_ok = float(logzerr[-1]) < 0.5
+    diversity_ok = (unique_logM_eq / max(len(logM_eq), 1)) > 0.25
+    split_ok = abs(median_a - median_b) < 0.1 * max(std_a, std_b, 1e-3)
+
+    def mark(ok):
+        return "PASS" if ok else "WARN"
+
+    with open(path / "diagnostics.txt", "w", encoding="ascii") as f:
+        f.write("=== Convergence diagnostics ===\n")
+        f.write(f"n_iter               = {int(res.niter)}\n")
+        f.write(f"n_samples_raw        = {len(samps_raw)}\n")
+        f.write(f"n_samples_equal      = {len(samps_eq)}\n")
+        f.write(
+            f"ess_weighted         = {ess_weighted:.1f}  "
+            f"(target n_effective={n_effective_target})  [{mark(ess_ok)}]\n"
+        )
+        f.write(
+            f"logz                 = {float(logz[-1]):+.4f} +/- "
+            f"{float(logzerr[-1]):.4f}  [{mark(logzerr_ok)}]\n"
+        )
+        f.write(f"bad_val_fraction     = {bad_frac:.4f}\n")
+        if unique_logM_raw is not None:
+            f.write(f"unique_logM_raw      = {unique_logM_raw}\n")
+        f.write(
+            f"unique_logM_equal    = {unique_logM_eq}  "
+            f"(of {len(logM_eq)})  [{mark(diversity_ok)}]\n\n"
+        )
+        f.write("=== logM split-half stability ===\n")
+        f.write(f"half_A: median={median_a:+.4f}  std={std_a:.4f}  n={len(a)}\n")
+        f.write(f"half_B: median={median_b:+.4f}  std={std_b:.4f}  n={len(b)}\n")
+        f.write(
+            f"|delta_median|       = {abs(median_a - median_b):.4f}  "
+            f"[{mark(split_ok)}]\n\n"
+        )
+        f.write("Interpretation:\n")
+        f.write("  ess_weighted < 0.8 * n_effective  -> raise --n-effective or --nlive\n")
+        f.write("  logzerr >= 0.5                    -> lower --dlogz-init or raise --nlive\n")
+        f.write("  unique_logM_equal/N_eq <= 0.25    -> likelihood plateaus or sampler stuck\n")
+        f.write("  |delta_median| >= 0.1*std         -> posterior not well-mixed across halves\n")
+
+
 def save_summary(path, mode, dict_data, dict_results):
     samples = dict_results["samps"]
     q16, q50, q84 = np.percentile(samples, [16, 50, 84], axis=0)
@@ -907,6 +990,7 @@ def run_fit_mode(seed_path, mode, dict_data, args):
     save_q_posterior(mode_path, dict_data, dict_results)
     save_mass_posterior(mode_path, dict_data, dict_results)
     save_summary(mode_path, mode, dict_data, dict_results)
+    save_diagnostics(mode_path, dict_data, dict_results, args.n_effective)
     return dict_results
 
 
