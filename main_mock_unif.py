@@ -1093,6 +1093,31 @@ def peek_fit(mode_path):
     )
 
 
+def replot_fit(mode_path, mode=None, n_particles=10000, n_effective=10000):
+    """Re-run the plotting/summary pipeline from saved pickles.
+
+    Use this when a fit completed (or crashed during plotting) and
+    dict_results.pkl + dict_stream.pkl exist on disk.
+    """
+    mode_path = Path(mode_path)
+    with open(mode_path / "dict_stream.pkl", "rb") as f:
+        dict_data = pickle.load(f)
+    with open(mode_path / "dict_results.pkl", "rb") as f:
+        dict_results = pickle.load(f)
+
+    if mode is None:
+        mode = "track_los" if mode_path.name.startswith("track_los") else "track"
+
+    best_params = dict_results["samps"][np.argmax(dict_results["logl"])]
+    plot_best_fit(mode_path, dict_data, best_params, n_particles)
+    save_corner_plots(mode_path, dict_data, dict_results)
+    save_q_posterior(mode_path, dict_data, dict_results)
+    save_mass_posterior(mode_path, dict_data, dict_results)
+    save_summary(mode_path, mode, dict_data, dict_results)
+    save_diagnostics(mode_path, dict_data, dict_results, n_effective)
+    print(f"[replot] Wrote plots + summary into {mode_path}")
+
+
 def save_mode_comparison(seed_path, dict_data, results_by_mode):
     if not {"track", "track_los"}.issubset(results_by_mode):
         return
@@ -1231,6 +1256,15 @@ def parse_args():
             "Restores the partial run, writes peek/ plots and summary, then exits."
         ),
     )
+    parser.add_argument(
+        "--replot",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a finished mode output folder. Re-reads dict_results.pkl "
+            "and dict_stream.pkl and regenerates plots + summary + diagnostics."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -1239,6 +1273,14 @@ def main():
 
     if args.peek is not None:
         peek_fit(args.peek)
+        return
+
+    if args.replot is not None:
+        replot_fit(
+            args.replot,
+            n_particles=args.n_particles,
+            n_effective=args.n_effective,
+        )
         return
 
     args.output_root = Path(args.output_root)
