@@ -945,12 +945,16 @@ def save_summary(path, mode, dict_data, dict_results):
             )
 
 
-def fit_mode_path(seed_path, mode):
-    return seed_path / mode
+def fit_mode_path(seed_path, mode, fixed_names=()):
+    if not fixed_names:
+        return seed_path / mode
+    suffix = "fix-" + "-".join(sorted(fixed_names))
+    return seed_path / f"{mode}__{suffix}"
 
 
 def run_fit_mode(seed_path, mode, dict_data, args):
-    mode_path = fit_mode_path(seed_path, mode)
+    fixed_names = tuple(args.fix_params or ())
+    mode_path = fit_mode_path(seed_path, mode, fixed_names)
     if mode_path.exists() and not args.overwrite:
         print(f"[seed={dict_data['seed']}] Skipping {mode}: existing output folder found at {mode_path}")
         if (mode_path / "dict_results.pkl").exists():
@@ -963,7 +967,6 @@ def run_fit_mode(seed_path, mode, dict_data, args):
         pickle.dump(dict_data, f)
 
     logl_fn = logl_unif if mode == "track" else logl_unif_los
-    fixed_names = tuple(args.fix_params or ())
     print(
         f"[seed={dict_data['seed']}] Fitting mode={mode}, "
         f"nlive={args.nlive}, n_particles={args.n_particles}, "
