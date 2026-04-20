@@ -41,10 +41,10 @@ plt.rcParams.update({"font.size": 14})
 BAD_VAL = -1e15
 EPSILON = 1e-6
 DEFAULT_OUTPUT_ROOT = Path("/data/dc824-2/StreamUnif")
-RS_MIN_KPC = 5.0
-RS_MAX_KPC = 30.0
-RS_SAT_MIN_KPC = 0.5
-RS_SAT_MAX_KPC = 3.0
+RS_MIN_KPC = 1.0
+RS_MAX_KPC = 100.0
+RS_SAT_MIN_KPC = 0.1
+RS_SAT_MAX_KPC = 10.0
 LOG_RS_MIN = np.log10(RS_MIN_KPC)
 LOG_RS_MAX = np.log10(RS_MAX_KPC)
 LOG_RS_SAT_MIN = np.log10(RS_SAT_MIN_KPC)
