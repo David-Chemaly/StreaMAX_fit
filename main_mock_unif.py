@@ -1,13 +1,17 @@
-"""Axisymmetric NFW projected-stream mock with scaled velocity/time priors.
+"""Axisymmetric NFW projected-stream mock with scale-free priors.
 
 This is the stream-track analogue of the StreaMASS orbit test.  The mock and
-the fit use the same axisymmetric NFW model; the only change relative to the
-old stream mock parametrisation is that velocity and time are sampled through
+the fit use the same axisymmetric NFW model.  To make the spatial track
+invariant under the mass scaling M->lambda*M, velocity and time are sampled
+through
 
-    log_alpha = log10(|v| / v_circ)
-    log_tau   = log10(t * v_circ / r0)
+    log_alpha  = log10(|v| / v_circ)
+    log_tau    = log10(t * v_circ / r0)
+    log_mfrac  = log10(m_sat / M_host)
 
-instead of directly sampling vx, vy, vz, and time.
+instead of sampling vx, vy, vz, t, and the satellite mass in absolute units.
+With track-only data, logM should marginalise to its uniform prior; adding a
+line-of-sight velocity datum breaks the degeneracy and pins logM.
 """
 
 import argparse
@@ -38,6 +42,8 @@ LOG_ALPHA_MIN = -1.0
 LOG_ALPHA_MAX = 1.0
 LOG_TAU_MIN = 0.0
 LOG_TAU_MAX = 2.0
+LOG_MFRAC_MIN = -5.0
+LOG_MFRAC_MAX = -2.0
 Z0_MIN_KPC = 1e-3
 Z0_MAX_KPC = 50.0
 LIKELIHOOD_MODES = ("track", "track_los")
@@ -48,7 +54,7 @@ LABELS = (
     "q",
     "theta_q",
     "phi_q",
-    "logm",
+    "log_mfrac",
     "rs",
     "x0",
     "z0",
@@ -74,7 +80,7 @@ def prior_transform_unif(u):
         u_q,
         u_theta_q,
         u_phi_q,
-        u_logm,
+        u_mfrac,
         u_rs,
         u_x0,
         u_z0,
@@ -90,7 +96,7 @@ def prior_transform_unif(u):
     q = 0.5 + u_q
     theta_q = jnp.arcsin(2.0 * u_theta_q - 1.0)
     phi_q = 2.0 * jnp.pi * u_phi_q
-    logm = 7.0 + 2.0 * u_logm
+    log_mfrac = LOG_MFRAC_MIN + (LOG_MFRAC_MAX - LOG_MFRAC_MIN) * u_mfrac
     rs = 0.5 + 2.5 * u_rs
     x0 = 10.0 + 70.0 * u_x0
     z0 = Z0_MIN_KPC + (Z0_MAX_KPC - Z0_MIN_KPC) * u_z0
@@ -108,7 +114,7 @@ def prior_transform_unif(u):
             q,
             theta_q,
             phi_q,
-            logm,
+            log_mfrac,
             rs,
             x0,
             z0,
@@ -130,7 +136,7 @@ def stream_free_to_physical(params):
         q,
         theta_q,
         phi_q,
-        logm,
+        log_mfrac,
         rs,
         x0,
         z0,
@@ -144,6 +150,8 @@ def stream_free_to_physical(params):
     dirx = np.cos(theta_q) * np.cos(phi_q)
     diry = np.cos(theta_q) * np.sin(phi_q)
     dirz = np.sin(theta_q)
+
+    logm = logM + log_mfrac
 
     v_circ = oriented_nfw_circular_speed(logM, Rs, x0, 0.0, z0, q, dirx, diry, dirz)
     r0 = np.sqrt(x0**2 + z0**2)
@@ -163,6 +171,7 @@ def stream_free_to_physical(params):
         "dirx": dirx,
         "diry": diry,
         "dirz": dirz,
+        "log_mfrac": log_mfrac,
         "logm": logm,
         "rs": rs,
         "x0": x0,
@@ -744,12 +753,14 @@ def save_summary(path, mode, dict_data, dict_results):
         f.write(f"  vz_theta = {dict_data['vz_theta']:.6f} rad\n")
         f.write(f"  vz_window = {dict_data['vz_window']:.6f} rad\n")
         f.write(f"  vz_count = {dict_data['vz_count']}\n\n")
-        f.write("Scaled velocity/time prior bounds:\n")
+        f.write("Scale-free prior bounds:\n")
         f.write(f"  log_alpha = [{LOG_ALPHA_MIN:.6g}, {LOG_ALPHA_MAX:.6g}]\n")
         f.write(f"  log_tau = [{LOG_TAU_MIN:.6g}, {LOG_TAU_MAX:.6g}]\n")
+        f.write(f"  log_mfrac = [{LOG_MFRAC_MIN:.6g}, {LOG_MFRAC_MAX:.6g}]\n")
         f.write(f"  z0 = [{Z0_MIN_KPC:.6g}, {Z0_MAX_KPC:.6g}] kpc\n")
         f.write("  speed = 10**log_alpha * v_circ\n")
-        f.write("  time = 10**log_tau * r0 / v_circ\n\n")
+        f.write("  time = 10**log_tau * r0 / v_circ\n")
+        f.write("  logm = logM + log_mfrac\n\n")
         for idx, label in enumerate(LABELS):
             f.write(
                 f"{label:>10s}: truth={dict_data['params'][idx]: .6f} "
