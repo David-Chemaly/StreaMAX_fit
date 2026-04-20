@@ -10,10 +10,9 @@ through
     log_mfrac  = log10(m_sat / M_host)
 
 instead of sampling vx, vy, vz, t, and the satellite mass in absolute units.
-The host and satellite scale radii are sampled log-uniformly over fixed
-physical ranges.  With track-only data, logM should marginalise to its uniform
-prior; adding a line-of-sight velocity datum breaks the degeneracy and pins
-logM.
+The host and satellite scale radii are sampled as logRs and logrs.  With
+track-only data, logM should marginalise to its uniform prior; adding a
+line-of-sight velocity datum breaks the degeneracy and pins logM.
 """
 
 import argparse
@@ -62,12 +61,12 @@ LIKELIHOOD_MODES = ("track", "track_los")
 
 LABELS = (
     "logM",
-    "Rs",
+    "logRs",
     "q",
     "theta_q",
     "phi_q",
     "log_mfrac",
-    "rs",
+    "logrs",
     "x0",
     "z0",
     "theta_v",
@@ -78,22 +77,19 @@ LABELS = (
 )
 NDIM = len(LABELS)
 
-# By default the projected position is fixed to the mock truth, leaving the
-# scale-free mass ridge as the target of the track-only flatness test.
-DEFAULT_FIXED_PARAMS = ("x0", "z0")
-
-# Additional parameters that are reasonable to fix at truth for focused
-# flatness/debug runs.  sig is a pure noise absorber (truth is 0); the
-# angle/direction and satellite Plummer scale mostly rotate or soften the
-# stream without changing the mass degeneracy.
-FIXABLE_PARAMS = DEFAULT_FIXED_PARAMS + (
-    "sig",
-    "theta_v",
-    "phi_v",
-    "theta_q",
-    "phi_q",
-    "rs",
+DEFAULT_FREE_PARAMS = (
+    "logM",
+    "logRs",
+    "q",
+    "log_mfrac",
+    "logrs",
+    "log_alpha",
+    "log_tau",
 )
+DEFAULT_FIXED_PARAMS = tuple(
+    label for label in LABELS if label not in DEFAULT_FREE_PARAMS
+)
+FIXABLE_PARAMS = DEFAULT_FIXED_PARAMS
 
 
 def effective_stream_particle_count(n_particles, n_steps):
@@ -105,12 +101,12 @@ def effective_stream_particle_count(n_particles, n_steps):
 def prior_transform_unif(u):
     (
         u_logM,
-        u_Rs,
+        u_logRs,
         u_q,
         u_theta_q,
         u_phi_q,
         u_mfrac,
-        u_rs,
+        u_logrs,
         u_x0,
         u_z0,
         u_theta_v,
@@ -121,12 +117,12 @@ def prior_transform_unif(u):
     ) = u
 
     logM = 10.0 + 4.0 * u_logM
-    Rs = 10.0 ** (LOG_RS_MIN + (LOG_RS_MAX - LOG_RS_MIN) * u_Rs)
+    logRs = LOG_RS_MIN + (LOG_RS_MAX - LOG_RS_MIN) * u_logRs
     q = 0.5 + u_q
     theta_q = jnp.arcsin(2.0 * u_theta_q - 1.0)
     phi_q = 2.0 * jnp.pi * u_phi_q
     log_mfrac = LOG_MFRAC_MIN + (LOG_MFRAC_MAX - LOG_MFRAC_MIN) * u_mfrac
-    rs = 10.0 ** (LOG_RS_SAT_MIN + (LOG_RS_SAT_MAX - LOG_RS_SAT_MIN) * u_rs)
+    logrs = LOG_RS_SAT_MIN + (LOG_RS_SAT_MAX - LOG_RS_SAT_MIN) * u_logrs
     x0 = 10.0 + 70.0 * u_x0
     z0 = Z0_MIN_KPC + (Z0_MAX_KPC - Z0_MIN_KPC) * u_z0
     theta_v = jnp.arcsin(2.0 * u_theta_v - 1.0)
@@ -139,12 +135,12 @@ def prior_transform_unif(u):
     return jnp.asarray(
         [
             logM,
-            Rs,
+            logRs,
             q,
             theta_q,
             phi_q,
             log_mfrac,
-            rs,
+            logrs,
             x0,
             z0,
             theta_v,
@@ -161,12 +157,12 @@ def stream_free_to_physical(params):
     params = np.asarray(params, dtype=float)
     (
         logM,
-        Rs,
+        logRs,
         q,
         theta_q,
         phi_q,
         log_mfrac,
-        rs,
+        logrs,
         x0,
         z0,
         theta_v,
@@ -175,6 +171,8 @@ def stream_free_to_physical(params):
         log_tau,
         sig,
     ) = params
+    Rs = 10.0**logRs
+    rs = 10.0**logrs
 
     dirx = np.cos(theta_q) * np.cos(phi_q)
     diry = np.cos(theta_q) * np.sin(phi_q)
@@ -193,6 +191,7 @@ def stream_free_to_physical(params):
 
     return {
         "logM": logM,
+        "logRs": logRs,
         "Rs": Rs,
         "q": q,
         "theta_q": theta_q,
@@ -202,6 +201,7 @@ def stream_free_to_physical(params):
         "dirz": dirz,
         "log_mfrac": log_mfrac,
         "logm": logm,
+        "logrs": logrs,
         "rs": rs,
         "x0": x0,
         "y0": 0.0,
@@ -761,7 +761,7 @@ def save_corner_plots(path, dict_data, dict_results):
     derived = derived_sample_columns(samples)
     truth_phys = stream_free_to_physical(dict_data["params"])
 
-    subset_indices = [0, 2, 3, 4, 11, 12]
+    subset_indices = [LABELS.index(label) for label in DEFAULT_FREE_PARAMS]
     subset_cols = []
     subset_labels = []
     subset_truth = []
@@ -947,8 +947,10 @@ def save_summary(path, mode, dict_data, dict_results):
         f.write(f"  vz_window = {dict_data['vz_window']:.6f} rad\n")
         f.write(f"  vz_count = {dict_data['vz_count']}\n\n")
         f.write("Scale-free prior bounds:\n")
-        f.write(f"  Rs = log-uniform [{RS_MIN_KPC:.6g}, {RS_MAX_KPC:.6g}] kpc\n")
-        f.write(f"  rs = log-uniform [{RS_SAT_MIN_KPC:.6g}, {RS_SAT_MAX_KPC:.6g}] kpc\n")
+        f.write(f"  logRs = [{LOG_RS_MIN:.6g}, {LOG_RS_MAX:.6g}]\n")
+        f.write(f"  logrs = [{LOG_RS_SAT_MIN:.6g}, {LOG_RS_SAT_MAX:.6g}]\n")
+        f.write(f"  Rs = 10**logRs = [{RS_MIN_KPC:.6g}, {RS_MAX_KPC:.6g}] kpc\n")
+        f.write(f"  rs = 10**logrs = [{RS_SAT_MIN_KPC:.6g}, {RS_SAT_MAX_KPC:.6g}] kpc\n")
         f.write(f"  log_alpha = [{LOG_ALPHA_MIN:.6g}, {LOG_ALPHA_MAX:.6g}]\n")
         f.write(f"  log_tau = [{LOG_TAU_MIN:.6g}, {LOG_TAU_MAX:.6g}]\n")
         f.write(f"  log_mfrac = [{LOG_MFRAC_MIN:.6g}, {LOG_MFRAC_MAX:.6g}]\n")
@@ -999,7 +1001,7 @@ def run_fit_mode(seed_path, mode, dict_data, args):
         "seed": int(dict_data["seed"]),
         "fixed_names": list(fixed_names),
         "labels": list(LABELS),
-        "radius_prior": "log_uniform_physical_Rs_rs",
+        "radius_parameterization": "sampled_logRs_logrs",
         "n_particles": int(args.n_particles),
         "n_min": int(args.n_min),
         "var_ratio": float(args.var_ratio),
@@ -1262,6 +1264,7 @@ def parse_args():
         help=(
             "Parameter names to fix at their mock truth values during the fit. "
             f"Defaults to: {', '.join(DEFAULT_FIXED_PARAMS)}. "
+            f"Default free parameters are: {', '.join(DEFAULT_FREE_PARAMS)}. "
             "Pass --fix-params with no names to fit all parameters. "
             f"Recommended-safe set: {', '.join(FIXABLE_PARAMS)}."
         ),
