@@ -15,6 +15,7 @@ line-of-sight velocity datum breaks the degeneracy and pins logM.
 """
 
 import argparse
+import json
 import os
 import pickle
 from functools import partial
@@ -522,6 +523,8 @@ def dynesty_fit_unif(
     dlogz_init=10.0,
     nthreads=None,
     fixed_names=(),
+    checkpoint_path=None,
+    checkpoint_every=0,
 ):
     nthreads = os.cpu_count() if nthreads is None else int(nthreads)
 
@@ -554,6 +557,11 @@ def dynesty_fit_unif(
         )
         logl_args = (dict_data, n_particles, n_min, var_ratio)
 
+    run_kwargs = {"n_effective": n_effective, "dlogz_init": dlogz_init}
+    if checkpoint_path is not None and checkpoint_every and checkpoint_every > 0:
+        run_kwargs["checkpoint_file"] = str(checkpoint_path)
+        run_kwargs["checkpoint_every"] = float(checkpoint_every)
+
     if nthreads > 1:
         import multiprocessing as mp
 
@@ -569,7 +577,7 @@ def dynesty_fit_unif(
                 pool=pool,
                 queue_size=2 * nthreads,
             )
-            sampler.run_nested(n_effective=n_effective, dlogz_init=dlogz_init)
+            sampler.run_nested(**run_kwargs)
     else:
         sampler = dynesty.DynamicNestedSampler(
             logl_for_sampler,
@@ -579,7 +587,7 @@ def dynesty_fit_unif(
             nlive=nlive,
             sample="rslice",
         )
-        sampler.run_nested(n_effective=n_effective, dlogz_init=dlogz_init)
+        sampler.run_nested(**run_kwargs)
 
     res = sampler.results
     inds = np.arange(len(res.samples))
@@ -713,58 +721,54 @@ def plot_best_fit(path, dict_data, best_params, n_particles):
 def save_corner_plots(path, dict_data, dict_results):
     samples = dict_results["samps"]
     truths = dict_data["params"]
+    fixed_indices = set(int(i) for i in dict_results.get("fixed_indices") or ())
 
-    figure = corner.corner(
-        samples,
-        labels=list(LABELS),
-        truths=truths,
-        truth_color="red",
-        color="blue",
-        quantiles=[0.16, 0.5, 0.84],
-        show_titles=True,
-        title_kwargs={"fontsize": 9},
-    )
-    figure.savefig(path / "corner_plot.pdf")
-    plt.close(figure)
+    free_cols = [i for i in range(NDIM) if i not in fixed_indices]
+    if len(free_cols) >= 2:
+        figure = corner.corner(
+            samples[:, free_cols],
+            labels=[LABELS[i] for i in free_cols],
+            truths=[truths[i] for i in free_cols],
+            truth_color="red",
+            color="blue",
+            quantiles=[0.16, 0.5, 0.84],
+            show_titles=True,
+            title_kwargs={"fontsize": 9},
+        )
+        figure.savefig(path / "corner_plot.pdf")
+        plt.close(figure)
 
     derived = derived_sample_columns(samples)
     truth_phys = stream_free_to_physical(dict_data["params"])
-    subset = np.column_stack(
-        [
-            samples[:, 0],
-            samples[:, 2],
-            samples[:, 3],
-            samples[:, 4],
-            samples[:, 11],
-            samples[:, 12],
-            derived[:, 0],
-            derived[:, 1],
-            derived[:, 4],
-        ]
-    )
-    subset_truth = [
-        dict_data["params"][0],
-        dict_data["params"][2],
-        dict_data["params"][3],
-        dict_data["params"][4],
-        dict_data["params"][11],
-        dict_data["params"][12],
-        truth_phys["speed"],
-        truth_phys["time"],
-        truth_phys["vz0"],
-    ]
-    figure = corner.corner(
-        subset,
-        labels=["logM", "q", "theta_q", "phi_q", "log_alpha", "log_tau", "|v|", "time", "vz0"],
-        truths=subset_truth,
-        truth_color="red",
-        color="blue",
-        quantiles=[0.16, 0.5, 0.84],
-        show_titles=True,
-        title_kwargs={"fontsize": 10},
-    )
-    figure.savefig(path / "corner_mass_velocity_time.pdf")
-    plt.close(figure)
+
+    subset_indices = [0, 2, 3, 4, 11, 12]
+    subset_cols = []
+    subset_labels = []
+    subset_truth = []
+    for idx in subset_indices:
+        if idx in fixed_indices:
+            continue
+        subset_cols.append(samples[:, idx])
+        subset_labels.append(LABELS[idx])
+        subset_truth.append(truths[idx])
+    subset_cols += [derived[:, 0], derived[:, 1], derived[:, 4]]
+    subset_labels += ["|v|", "time", "vz0"]
+    subset_truth += [truth_phys["speed"], truth_phys["time"], truth_phys["vz0"]]
+
+    subset = np.column_stack(subset_cols)
+    if subset.shape[1] >= 2:
+        figure = corner.corner(
+            subset,
+            labels=subset_labels,
+            truths=subset_truth,
+            truth_color="red",
+            color="blue",
+            quantiles=[0.16, 0.5, 0.84],
+            show_titles=True,
+            title_kwargs={"fontsize": 10},
+        )
+        figure.savefig(path / "corner_mass_velocity_time.pdf")
+        plt.close(figure)
 
 
 def save_q_posterior(path, dict_data, dict_results):
@@ -967,10 +971,28 @@ def run_fit_mode(seed_path, mode, dict_data, args):
         pickle.dump(dict_data, f)
 
     logl_fn = logl_unif if mode == "track" else logl_unif_los
+    checkpoint_path = mode_path / "dynesty.save" if args.checkpoint_every > 0 else None
+    fit_config = {
+        "mode": mode,
+        "seed": int(dict_data["seed"]),
+        "fixed_names": list(fixed_names),
+        "labels": list(LABELS),
+        "n_particles": int(args.n_particles),
+        "n_min": int(args.n_min),
+        "var_ratio": float(args.var_ratio),
+        "nlive": int(args.nlive),
+        "n_effective": int(args.n_effective),
+        "dlogz_init": float(args.dlogz_init),
+        "checkpoint_every": float(args.checkpoint_every),
+    }
+    with open(mode_path / "fit_config.json", "w", encoding="ascii") as f:
+        json.dump(fit_config, f, indent=2)
+
     print(
         f"[seed={dict_data['seed']}] Fitting mode={mode}, "
         f"nlive={args.nlive}, n_particles={args.n_particles}, "
-        f"fixed={fixed_names or 'none'}"
+        f"fixed={fixed_names or 'none'}, "
+        f"checkpoint={'on' if checkpoint_path else 'off'}"
     )
     dict_results = dynesty_fit_unif(
         dict_data,
@@ -983,6 +1005,8 @@ def run_fit_mode(seed_path, mode, dict_data, args):
         dlogz_init=args.dlogz_init,
         nthreads=args.nthreads,
         fixed_names=fixed_names,
+        checkpoint_path=checkpoint_path,
+        checkpoint_every=args.checkpoint_every,
     )
     with open(mode_path / "dict_results.pkl", "wb") as f:
         pickle.dump(dict_results, f)
@@ -995,6 +1019,78 @@ def run_fit_mode(seed_path, mode, dict_data, args):
     save_summary(mode_path, mode, dict_data, dict_results)
     save_diagnostics(mode_path, dict_data, dict_results, args.n_effective)
     return dict_results
+
+
+def load_checkpoint_samples(mode_path):
+    """Restore a partial dynesty run and return a dict_results-shaped dict.
+
+    Raises FileNotFoundError if the checkpoint or fit_config is missing.
+    """
+    mode_path = Path(mode_path)
+    config_path = mode_path / "fit_config.json"
+    checkpoint_file = mode_path / "dynesty.save"
+    if not config_path.exists():
+        raise FileNotFoundError(f"Missing fit_config.json at {config_path}")
+    if not checkpoint_file.exists():
+        raise FileNotFoundError(f"Missing dynesty.save at {checkpoint_file}")
+
+    with open(config_path, "r", encoding="ascii") as f:
+        config = json.load(f)
+    with open(mode_path / "dict_stream.pkl", "rb") as f:
+        dict_data = pickle.load(f)
+
+    fixed_names = tuple(config.get("fixed_names") or ())
+    free_indices, fixed_indices = resolve_fixed_indices(fixed_names)
+    truth = np.asarray(dict_data["params"], dtype=np.float64)
+
+    sampler = dynesty.DynamicNestedSampler.restore(str(checkpoint_file))
+    res = sampler.results
+    if len(res.samples) == 0:
+        raise RuntimeError("Checkpoint has no samples yet; try again later.")
+
+    inds = np.arange(len(res.samples))
+    inds = dyut.resample_equal(inds, weights=np.exp(res.logwt - res.logz[-1]))
+    raw_samps = res.samples[inds]
+
+    if len(fixed_indices) == 0:
+        full_samps = raw_samps
+    else:
+        full_samps = np.zeros((len(raw_samps), NDIM), dtype=np.float64)
+        full_samps[:, free_indices] = raw_samps
+        full_samps[:, fixed_indices] = truth[fixed_indices]
+
+    return dict_data, {
+        "dns": sampler,
+        "samps": full_samps,
+        "logl": res.logl[inds],
+        "logz": res.logz,
+        "logzerr": res.logzerr,
+        "nthreads": "peek",
+        "fixed_names": fixed_names,
+        "free_indices": tuple(int(i) for i in free_indices),
+        "fixed_indices": tuple(int(i) for i in fixed_indices),
+        "ndim_fit": int(len(free_indices)),
+    }
+
+
+def peek_fit(mode_path):
+    """Read a partial checkpoint and write peek/ corner + mass + summary plots."""
+    mode_path = Path(mode_path)
+    dict_data, dict_results = load_checkpoint_samples(mode_path)
+    peek_dir = mode_path / "peek"
+    peek_dir.mkdir(exist_ok=True)
+    save_corner_plots(peek_dir, dict_data, dict_results)
+    save_q_posterior(peek_dir, dict_data, dict_results)
+    save_mass_posterior(peek_dir, dict_data, dict_results)
+    save_summary(peek_dir, "peek", dict_data, dict_results)
+    n_iter = int(dict_results["dns"].results.niter)
+    n_eq = len(dict_results["samps"])
+    logz_last = float(dict_results["logz"][-1])
+    logzerr_last = float(dict_results["logzerr"][-1])
+    print(
+        f"[peek] {mode_path}: niter={n_iter}, n_equal={n_eq}, "
+        f"logz={logz_last:+.3f}+/-{logzerr_last:.3f}"
+    )
 
 
 def save_mode_comparison(seed_path, dict_data, results_by_mode):
@@ -1120,11 +1216,31 @@ def parse_args():
             f"Recommended-safe set: {', '.join(FIXABLE_PARAMS)}."
         ),
     )
+    parser.add_argument(
+        "--checkpoint-every",
+        type=float,
+        default=600.0,
+        help="Dynesty checkpoint interval in seconds (0 disables).",
+    )
+    parser.add_argument(
+        "--peek",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a mode output folder with a dynesty.save file. "
+            "Restores the partial run, writes peek/ plots and summary, then exits."
+        ),
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+
+    if args.peek is not None:
+        peek_fit(args.peek)
+        return
+
     args.output_root = Path(args.output_root)
     args.output_root.mkdir(parents=True, exist_ok=True)
 
