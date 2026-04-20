@@ -520,7 +520,7 @@ def dynesty_fit_unif(
     var_ratio=1e-10,
     nlive=2000,
     n_effective=10000,
-    dlogz_init=10.0,
+    dlogz_init=0.01,
     nthreads=None,
     fixed_names=(),
     checkpoint_path=None,
@@ -1229,7 +1229,7 @@ def parse_args():
     parser.add_argument("--n-effective", type=int, default=10000)
     parser.add_argument("--n-min", type=int, default=9)
     parser.add_argument("--var-ratio", type=float, default=1e-10)
-    parser.add_argument("--dlogz-init", type=float, default=10.0)
+    parser.add_argument("--dlogz-init", type=float, default=0.01)
     parser.add_argument("--nthreads", type=int, default=os.cpu_count())
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument(
