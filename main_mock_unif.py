@@ -17,6 +17,7 @@ line-of-sight velocity datum breaks the degeneracy and pins logM.
 import argparse
 import os
 import pickle
+from functools import partial
 from pathlib import Path
 
 import dynesty
@@ -42,8 +43,8 @@ LOG_ALPHA_MIN = -1.0
 LOG_ALPHA_MAX = 1.0
 LOG_TAU_MIN = 0.0
 LOG_TAU_MAX = 2.0
-LOG_MFRAC_MIN = -5.0
-LOG_MFRAC_MAX = -2.0
+LOG_MFRAC_MIN = -7.0
+LOG_MFRAC_MAX = -1.0
 Z0_MIN_KPC = 1e-3
 Z0_MAX_KPC = 50.0
 LIKELIHOOD_MODES = ("track", "track_los")
@@ -65,6 +66,13 @@ LABELS = (
     "sig",
 )
 NDIM = len(LABELS)
+
+# Parameters safe to fix at truth for the logM flatness test: they are
+# orthogonal or weakly coupled to the mass ridge (logM, log_mfrac, log_alpha,
+# log_tau) and the track shape (Rs, q, x0, z0).  sig is a pure noise absorber
+# (truth is 0); the angle/direction and satellite Plummer scale only rotate or
+# soften the stream without changing the mass degeneracy.
+FIXABLE_PARAMS = ("sig", "theta_v", "phi_v", "theta_q", "phi_q", "rs")
 
 
 def effective_stream_particle_count(n_particles, n_steps):
@@ -470,6 +478,39 @@ def logl_unif_los(
     return jnp.nan_to_num(log_like, nan=BAD_VAL, neginf=BAD_VAL, posinf=BAD_VAL)
 
 
+def _expand_params(params_reduced, truth, free_indices, fixed_indices):
+    params_full = np.zeros(NDIM, dtype=np.float64)
+    params_full[free_indices] = np.asarray(params_reduced)
+    params_full[fixed_indices] = np.asarray(truth)[fixed_indices]
+    return params_full
+
+
+def _reduced_prior_transform(u_reduced, truth, free_indices, fixed_indices):
+    u_full = np.full(NDIM, 0.5)
+    u_full[free_indices] = np.asarray(u_reduced)
+    params = np.asarray(prior_transform_unif(u_full), dtype=np.float64)
+    params[fixed_indices] = np.asarray(truth)[fixed_indices]
+    return params[free_indices]
+
+
+def _reduced_logl_track(params_reduced, dict_data, n_particles, n_min, var_ratio,
+                        truth, free_indices, fixed_indices):
+    params_full = _expand_params(params_reduced, truth, free_indices, fixed_indices)
+    return logl_unif(params_full, dict_data, n_particles, n_min, var_ratio)
+
+
+def _reduced_logl_track_los(params_reduced, dict_data, n_particles, n_min, var_ratio,
+                            truth, free_indices, fixed_indices):
+    params_full = _expand_params(params_reduced, truth, free_indices, fixed_indices)
+    return logl_unif_los(params_full, dict_data, n_particles, n_min, var_ratio)
+
+
+def resolve_fixed_indices(fixed_names):
+    fixed_indices = np.array([LABELS.index(n) for n in fixed_names], dtype=np.int64)
+    free_indices = np.array([i for i in range(NDIM) if i not in fixed_indices], dtype=np.int64)
+    return free_indices, fixed_indices
+
+
 def dynesty_fit_unif(
     dict_data,
     logl_fn,
@@ -480,9 +521,38 @@ def dynesty_fit_unif(
     n_effective=10000,
     dlogz_init=10.0,
     nthreads=None,
+    fixed_names=(),
 ):
     nthreads = os.cpu_count() if nthreads is None else int(nthreads)
-    logl_args = (dict_data, n_particles, n_min, var_ratio)
+
+    truth = np.asarray(dict_data["params"], dtype=np.float64)
+    free_indices, fixed_indices = resolve_fixed_indices(fixed_names)
+    ndim_fit = int(len(free_indices))
+
+    if len(fixed_indices) == 0:
+        logl_for_sampler = logl_fn
+        prior_for_sampler = prior_transform_unif
+        logl_args = (dict_data, n_particles, n_min, var_ratio)
+    else:
+        if logl_fn is logl_unif:
+            reduced_logl_impl = _reduced_logl_track
+        elif logl_fn is logl_unif_los:
+            reduced_logl_impl = _reduced_logl_track_los
+        else:
+            raise ValueError(f"Unsupported logl_fn for reduced fit: {logl_fn}")
+        logl_for_sampler = partial(
+            reduced_logl_impl,
+            truth=truth,
+            free_indices=free_indices,
+            fixed_indices=fixed_indices,
+        )
+        prior_for_sampler = partial(
+            _reduced_prior_transform,
+            truth=truth,
+            free_indices=free_indices,
+            fixed_indices=fixed_indices,
+        )
+        logl_args = (dict_data, n_particles, n_min, var_ratio)
 
     if nthreads > 1:
         import multiprocessing as mp
@@ -490,9 +560,9 @@ def dynesty_fit_unif(
         mp.set_start_method("spawn", force=True)
         with mp.Pool(nthreads) as pool:
             sampler = dynesty.DynamicNestedSampler(
-                logl_fn,
-                prior_transform_unif,
-                NDIM,
+                logl_for_sampler,
+                prior_for_sampler,
+                ndim_fit,
                 logl_args=logl_args,
                 nlive=nlive,
                 sample="rslice",
@@ -502,9 +572,9 @@ def dynesty_fit_unif(
             sampler.run_nested(n_effective=n_effective, dlogz_init=dlogz_init)
     else:
         sampler = dynesty.DynamicNestedSampler(
-            logl_fn,
-            prior_transform_unif,
-            NDIM,
+            logl_for_sampler,
+            prior_for_sampler,
+            ndim_fit,
             logl_args=logl_args,
             nlive=nlive,
             sample="rslice",
@@ -515,13 +585,25 @@ def dynesty_fit_unif(
     inds = np.arange(len(res.samples))
     inds = dyut.resample_equal(inds, weights=np.exp(res.logwt - res.logz[-1]))
 
+    raw_samps = res.samples[inds]
+    if len(fixed_indices) == 0:
+        full_samps = raw_samps
+    else:
+        full_samps = np.zeros((len(raw_samps), NDIM), dtype=np.float64)
+        full_samps[:, free_indices] = raw_samps
+        full_samps[:, fixed_indices] = truth[fixed_indices]
+
     return {
         "dns": sampler,
-        "samps": res.samples[inds],
+        "samps": full_samps,
         "logl": res.logl[inds],
         "logz": res.logz,
         "logzerr": res.logzerr,
         "nthreads": nthreads,
+        "fixed_names": tuple(fixed_names),
+        "free_indices": tuple(int(i) for i in free_indices),
+        "fixed_indices": tuple(int(i) for i in fixed_indices),
+        "ndim_fit": ndim_fit,
     }
 
 
@@ -735,10 +817,14 @@ def save_summary(path, mode, dict_data, dict_results):
     derived = derived_sample_columns(samples)
     derived_q16, derived_q50, derived_q84 = np.percentile(derived, [16, 50, 84], axis=0)
 
+    fixed_names = dict_results.get("fixed_names", ())
+    ndim_fit = dict_results.get("ndim_fit", NDIM)
     with open(path / "summary.txt", "w", encoding="ascii") as f:
         f.write(f"seed = {dict_data['seed']}\n")
         f.write(f"mode = {mode}\n")
         f.write(f"nthreads = {dict_results.get('nthreads', 'unknown')}\n")
+        f.write(f"ndim_fit = {ndim_fit} / {NDIM}\n")
+        f.write(f"fixed = {','.join(fixed_names) if fixed_names else 'none'}\n")
         f.write(f"truth_trials = {dict_data.get('truth_trials', 'unknown')}\n")
         f.write(f"sigma_pct = {dict_data['sigma_pct']:.6f}\n")
         f.write(f"n_particles = {dict_data['n_particles']}\n")
@@ -794,9 +880,11 @@ def run_fit_mode(seed_path, mode, dict_data, args):
         pickle.dump(dict_data, f)
 
     logl_fn = logl_unif if mode == "track" else logl_unif_los
+    fixed_names = tuple(args.fix_params or ())
     print(
         f"[seed={dict_data['seed']}] Fitting mode={mode}, "
-        f"nlive={args.nlive}, n_particles={args.n_particles}"
+        f"nlive={args.nlive}, n_particles={args.n_particles}, "
+        f"fixed={fixed_names or 'none'}"
     )
     dict_results = dynesty_fit_unif(
         dict_data,
@@ -808,6 +896,7 @@ def run_fit_mode(seed_path, mode, dict_data, args):
         n_effective=args.n_effective,
         dlogz_init=args.dlogz_init,
         nthreads=args.nthreads,
+        fixed_names=fixed_names,
     )
     with open(mode_path / "dict_results.pkl", "wb") as f:
         pickle.dump(dict_results, f)
@@ -935,6 +1024,15 @@ def parse_args():
     parser.add_argument("--dlogz-init", type=float, default=10.0)
     parser.add_argument("--nthreads", type=int, default=os.cpu_count())
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--fix-params",
+        nargs="*",
+        default=[],
+        help=(
+            "Parameter names to fix at their mock truth values during the fit. "
+            f"Recommended-safe set: {', '.join(FIXABLE_PARAMS)}."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -942,6 +1040,12 @@ def main():
     args = parse_args()
     args.output_root = Path(args.output_root)
     args.output_root.mkdir(parents=True, exist_ok=True)
+
+    unknown = [p for p in (args.fix_params or ()) if p not in LABELS]
+    if unknown:
+        raise SystemExit(
+            f"--fix-params contains unknown names: {unknown}. Valid names: {list(LABELS)}"
+        )
 
     if args.seeds is not None:
         seeds = args.seeds
