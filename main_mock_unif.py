@@ -10,8 +10,10 @@ through
     log_mfrac  = log10(m_sat / M_host)
 
 instead of sampling vx, vy, vz, t, and the satellite mass in absolute units.
-With track-only data, logM should marginalise to its uniform prior; adding a
-line-of-sight velocity datum breaks the degeneracy and pins logM.
+The host and satellite scale radii are sampled log-uniformly over fixed
+physical ranges.  With track-only data, logM should marginalise to its uniform
+prior; adding a line-of-sight velocity datum breaks the degeneracy and pins
+logM.
 """
 
 import argparse
@@ -40,6 +42,14 @@ plt.rcParams.update({"font.size": 14})
 BAD_VAL = -1e15
 EPSILON = 1e-6
 DEFAULT_OUTPUT_ROOT = Path("/data/dc824-2/StreamUnif")
+RS_MIN_KPC = 5.0
+RS_MAX_KPC = 30.0
+RS_SAT_MIN_KPC = 0.5
+RS_SAT_MAX_KPC = 3.0
+LOG_RS_MIN = np.log10(RS_MIN_KPC)
+LOG_RS_MAX = np.log10(RS_MAX_KPC)
+LOG_RS_SAT_MIN = np.log10(RS_SAT_MIN_KPC)
+LOG_RS_SAT_MAX = np.log10(RS_SAT_MAX_KPC)
 LOG_ALPHA_MIN = -1.0
 LOG_ALPHA_MAX = 1.0
 LOG_TAU_MIN = 0.0
@@ -68,12 +78,22 @@ LABELS = (
 )
 NDIM = len(LABELS)
 
-# Parameters safe to fix at truth for the logM flatness test: they are
-# orthogonal or weakly coupled to the mass ridge (logM, log_mfrac, log_alpha,
-# log_tau) and the track shape (Rs, q, x0, z0).  sig is a pure noise absorber
-# (truth is 0); the angle/direction and satellite Plummer scale only rotate or
-# soften the stream without changing the mass degeneracy.
-FIXABLE_PARAMS = ("sig", "theta_v", "phi_v", "theta_q", "phi_q", "rs")
+# By default the projected position is fixed to the mock truth, leaving the
+# scale-free mass ridge as the target of the track-only flatness test.
+DEFAULT_FIXED_PARAMS = ("x0", "z0")
+
+# Additional parameters that are reasonable to fix at truth for focused
+# flatness/debug runs.  sig is a pure noise absorber (truth is 0); the
+# angle/direction and satellite Plummer scale mostly rotate or soften the
+# stream without changing the mass degeneracy.
+FIXABLE_PARAMS = DEFAULT_FIXED_PARAMS + (
+    "sig",
+    "theta_v",
+    "phi_v",
+    "theta_q",
+    "phi_q",
+    "rs",
+)
 
 
 def effective_stream_particle_count(n_particles, n_steps):
@@ -101,12 +121,12 @@ def prior_transform_unif(u):
     ) = u
 
     logM = 10.0 + 4.0 * u_logM
-    Rs = 5.0 + 25.0 * u_Rs
+    Rs = 10.0 ** (LOG_RS_MIN + (LOG_RS_MAX - LOG_RS_MIN) * u_Rs)
     q = 0.5 + u_q
     theta_q = jnp.arcsin(2.0 * u_theta_q - 1.0)
     phi_q = 2.0 * jnp.pi * u_phi_q
     log_mfrac = LOG_MFRAC_MIN + (LOG_MFRAC_MAX - LOG_MFRAC_MIN) * u_mfrac
-    rs = 0.5 + 2.5 * u_rs
+    rs = 10.0 ** (LOG_RS_SAT_MIN + (LOG_RS_SAT_MAX - LOG_RS_SAT_MIN) * u_rs)
     x0 = 10.0 + 70.0 * u_x0
     z0 = Z0_MIN_KPC + (Z0_MAX_KPC - Z0_MIN_KPC) * u_z0
     theta_v = jnp.arcsin(2.0 * u_theta_v - 1.0)
@@ -927,6 +947,8 @@ def save_summary(path, mode, dict_data, dict_results):
         f.write(f"  vz_window = {dict_data['vz_window']:.6f} rad\n")
         f.write(f"  vz_count = {dict_data['vz_count']}\n\n")
         f.write("Scale-free prior bounds:\n")
+        f.write(f"  Rs = log-uniform [{RS_MIN_KPC:.6g}, {RS_MAX_KPC:.6g}] kpc\n")
+        f.write(f"  rs = log-uniform [{RS_SAT_MIN_KPC:.6g}, {RS_SAT_MAX_KPC:.6g}] kpc\n")
         f.write(f"  log_alpha = [{LOG_ALPHA_MIN:.6g}, {LOG_ALPHA_MAX:.6g}]\n")
         f.write(f"  log_tau = [{LOG_TAU_MIN:.6g}, {LOG_TAU_MAX:.6g}]\n")
         f.write(f"  log_mfrac = [{LOG_MFRAC_MIN:.6g}, {LOG_MFRAC_MAX:.6g}]\n")
@@ -977,6 +999,7 @@ def run_fit_mode(seed_path, mode, dict_data, args):
         "seed": int(dict_data["seed"]),
         "fixed_names": list(fixed_names),
         "labels": list(LABELS),
+        "radius_prior": "log_uniform_physical_Rs_rs",
         "n_particles": int(args.n_particles),
         "n_min": int(args.n_min),
         "var_ratio": float(args.var_ratio),
@@ -1235,9 +1258,11 @@ def parse_args():
     parser.add_argument(
         "--fix-params",
         nargs="*",
-        default=[],
+        default=list(DEFAULT_FIXED_PARAMS),
         help=(
             "Parameter names to fix at their mock truth values during the fit. "
+            f"Defaults to: {', '.join(DEFAULT_FIXED_PARAMS)}. "
+            "Pass --fix-params with no names to fit all parameters. "
             f"Recommended-safe set: {', '.join(FIXABLE_PARAMS)}."
         ),
     )
