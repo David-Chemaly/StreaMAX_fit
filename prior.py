@@ -105,3 +105,59 @@ def prior_transform_v(p):
         x1, z1, vx1, vy1, vz1,
         time1, sig1, sig_v1
     ])
+
+
+def prior_transform_scale_free_real(p):
+    # ndim = 14
+    (
+        logM,
+        logRs,
+        q,
+        theta_q,
+        phi_q,
+        log_mfrac,
+        logrs,
+        x0,
+        z0,
+        theta_v,
+        phi_v,
+        log_alpha,
+        log_tau,
+        sig,
+    ) = p
+
+    logM1 = 11.0 + 3.0 * logM
+    logRs1 = jnp.log10(5.0) + (jnp.log10(25.0) - jnp.log10(5.0)) * logRs
+    q1 = 0.5 + q
+    theta_q1 = jnp.arcsin(2.0 * theta_q - 1.0)
+    phi_q1 = 2.0 * jnp.pi * phi_q
+    log_mfrac1 = -7.0 + 5.0 * log_mfrac
+    logrs1 = jnp.log10(1.0) + (jnp.log10(3.0) - jnp.log10(1.0)) * logrs
+
+    x1 = jax.scipy.special.ndtri(0.5 + x0 / 2.0) * 150.0
+    z1 = jax.scipy.special.ndtri(z0) * 150.0
+
+    theta_v1 = jnp.arcsin(2.0 * theta_v - 1.0)
+    phi_v1 = 2.0 * jnp.pi * phi_v
+    log_alpha1 = -1.0 + 2.0 * log_alpha
+    log_tau1 = 2.0 * log_tau
+    sig1 = 25.0 * sig
+
+    return jnp.array(
+        [
+            logM1,
+            logRs1,
+            q1,
+            theta_q1,
+            phi_q1,
+            log_mfrac1,
+            logrs1,
+            x1,
+            z1,
+            theta_v1,
+            phi_v1,
+            log_alpha1,
+            log_tau1,
+            sig1,
+        ]
+    )

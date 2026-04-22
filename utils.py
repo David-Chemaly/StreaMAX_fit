@@ -6,6 +6,8 @@ from astropy.io import fits
 from astropy.cosmology import Planck18 as cosmo
 import numpy as np
 
+EPSILON = 1e-6
+
 @jax.jit
 def get_q(dirx, diry, dirz, q_min=0.5, q_max=1.5):
     """
@@ -66,6 +68,148 @@ def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=Tru
                                                             n_particles, 
                                                             unroll)
     _, _, theta_stream, r_stream, _ = StreaMAX.get_stream_ordered(xv_stream[:, 0], xv_stream[:, 1], xhi_stream)
+
+    return theta_stream, r_stream, xv_stream
+
+
+def oriented_nfw_circular_speed(logM, Rs, x0, y0, z0, q, dirx, diry, dirz):
+    params_host = StreaMAX.prepare_params(
+        {
+            'logM': logM,
+            'Rs': Rs,
+            'a': 1.0,
+            'b': 1.0,
+            'c': q,
+            'dirx': dirx,
+            'diry': diry,
+            'dirz': dirz,
+            'x_origin': 0.0,
+            'y_origin': 0.0,
+            'z_origin': 0.0,
+        }
+    )
+    acc = np.asarray(StreaMAX.NFW_acceleration(x0, y0, z0, params_host))
+    radius = np.hypot(x0, y0)
+    if radius < EPSILON:
+        return EPSILON
+
+    e_radius = np.asarray([x0 / radius, y0 / radius, 0.0])
+    a_radius = float(np.dot(acc, e_radius))
+    return float(np.sqrt(max(-radius * a_radius, EPSILON)))
+
+
+def scale_free_params_to_physical(params):
+    params = np.asarray(params, dtype=float)
+    (
+        logM,
+        logRs,
+        q,
+        theta_q,
+        phi_q,
+        log_mfrac,
+        logrs,
+        x0,
+        z0,
+        theta_v,
+        phi_v,
+        log_alpha,
+        log_tau,
+        sig,
+    ) = params
+
+    Rs = 10.0**logRs
+    rs = 10.0**logrs
+    dirx = np.cos(theta_q) * np.cos(phi_q)
+    diry = np.cos(theta_q) * np.sin(phi_q)
+    dirz = np.sin(theta_q)
+    logm = logM + log_mfrac
+
+    v_circ = oriented_nfw_circular_speed(logM, Rs, x0, 0.0, z0, q, dirx, diry, dirz)
+    r0 = np.sqrt(x0**2 + z0**2)
+    speed = (10.0**log_alpha) * v_circ
+    time = (10.0**log_tau) * r0 / max(v_circ, EPSILON)
+
+    vx0 = speed * np.cos(theta_v) * np.cos(phi_v)
+    vy0 = speed * np.cos(theta_v) * np.sin(phi_v)
+    vz0 = speed * np.sin(theta_v)
+
+    return {
+        'logM': logM,
+        'logRs': logRs,
+        'Rs': Rs,
+        'q': q,
+        'theta_q': theta_q,
+        'phi_q': phi_q,
+        'dirx': dirx,
+        'diry': diry,
+        'dirz': dirz,
+        'log_mfrac': log_mfrac,
+        'logm': logm,
+        'logrs': logrs,
+        'rs': rs,
+        'x0': x0,
+        'y0': 0.0,
+        'z0': z0,
+        'vx0': vx0,
+        'vy0': vy0,
+        'vz0': vz0,
+        'time': time,
+        'theta_v': theta_v,
+        'phi_v': phi_v,
+        'log_alpha': log_alpha,
+        'log_tau': log_tau,
+        'sig': sig,
+        'v_circ': v_circ,
+        'speed': speed,
+    }
+
+
+def params_to_stream_scale_free(params, n_particles=10000, n_steps=99, alpha=1., unroll=True):
+    phys = scale_free_params_to_physical(params)
+
+    type_host = 'NFW'
+    params_host = {
+        'logM': phys['logM'],
+        'Rs': phys['Rs'],
+        'a': 1.0,
+        'b': 1.0,
+        'c': phys['q'],
+        'dirx': phys['dirx'],
+        'diry': phys['diry'],
+        'dirz': phys['dirz'],
+        'x_origin': 0.0,
+        'y_origin': 0.0,
+        'z_origin': 0.0,
+    }
+
+    type_sat = 'Plummer'
+    params_sat = {
+        'logM': phys['logm'],
+        'Rs': phys['rs'],
+        'x_origin': phys['x0'],
+        'y_origin': 0.0,
+        'z_origin': phys['z0'],
+    }
+
+    xv_f = jnp.array(
+        [phys['x0'], 0.0, phys['z0'], phys['vx0'], phys['vy0'], phys['vz0']]
+    )
+
+    _, _, xv_stream, xhi_stream = StreaMAX.generate_stream(
+        xv_f,
+        type_host,
+        params_host,
+        type_sat,
+        params_sat,
+        phys['time'],
+        alpha,
+        n_steps,
+        n_particles,
+        unroll,
+    )
+    _, _, theta_stream, r_stream, _ = StreaMAX.get_stream_ordered(
+        xv_stream[:, 0], xv_stream[:, 1], xhi_stream
+    )
 
     return theta_stream, r_stream, xv_stream
 
