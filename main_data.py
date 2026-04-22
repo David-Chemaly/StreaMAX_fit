@@ -31,7 +31,7 @@ LEGACY_LABELS = (
     'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig',
 )
 SCALE_FREE_LABELS = (
-    'logM', 'logRs', 'q', 'theta_q', 'phi_q', 'log_mfrac', 'logrs',
+    'logM', 'logRs', 'dirx', 'diry', 'dirz', 'log_mfrac', 'logrs',
     'x0', 'z0', 'theta_v', 'phi_v', 'log_alpha', 'log_tau', 'sig',
 )
 
@@ -185,7 +185,7 @@ def get_fit_spec(parameterization, mode):
 
 def extract_q_samples(parameterization, samples):
     samples = np.asarray(samples)
-    if parameterization == 'legacy':
+    if parameterization in ('legacy', 'scale_free'):
         return np.asarray(get_q(samples[:, 2], samples[:, 3], samples[:, 4]))
     return np.asarray(samples[:, 2], dtype=float)
 

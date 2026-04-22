@@ -103,9 +103,9 @@ def scale_free_params_to_physical(params):
     (
         logM,
         logRs,
-        q,
-        theta_q,
-        phi_q,
+        dirx,
+        diry,
+        dirz,
         log_mfrac,
         logrs,
         x0,
@@ -119,9 +119,7 @@ def scale_free_params_to_physical(params):
 
     Rs = 10.0**logRs
     rs = 10.0**logrs
-    dirx = np.cos(theta_q) * np.cos(phi_q)
-    diry = np.cos(theta_q) * np.sin(phi_q)
-    dirz = np.sin(theta_q)
+    q = float(get_q(dirx, diry, dirz))
     logm = logM + log_mfrac
 
     v_circ = oriented_nfw_circular_speed(logM, Rs, x0, 0.0, z0, q, dirx, diry, dirz)
@@ -138,8 +136,6 @@ def scale_free_params_to_physical(params):
         'logRs': logRs,
         'Rs': Rs,
         'q': q,
-        'theta_q': theta_q,
-        'phi_q': phi_q,
         'dirx': dirx,
         'diry': diry,
         'dirz': dirz,

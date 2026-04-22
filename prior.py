@@ -112,9 +112,9 @@ def prior_transform_scale_free_real(p):
     (
         logM,
         logRs,
-        q,
-        theta_q,
-        phi_q,
+        dirx,
+        diry,
+        dirz,
         log_mfrac,
         logrs,
         x0,
@@ -127,12 +127,12 @@ def prior_transform_scale_free_real(p):
     ) = p
 
     logM1 = 11.0 + 3.0 * logM
-    logRs1 = jnp.log10(5.0) + (jnp.log10(25.0) - jnp.log10(5.0)) * logRs
-    q1 = 0.5 + q
-    theta_q1 = jnp.arcsin(2.0 * theta_q - 1.0)
-    phi_q1 = 2.0 * jnp.pi * phi_q
+    logRs1 = jnp.log10(0.3) + (jnp.log10(300.0) - jnp.log10(0.3)) * logRs
+    dirx1 = jax.scipy.special.ndtri(dirx)
+    diry1 = jax.scipy.special.ndtri(diry)
+    dirz1 = jax.scipy.special.ndtri(0.5 + dirz / 2.0)
     log_mfrac1 = -7.0 + 5.0 * log_mfrac
-    logrs1 = jnp.log10(1.0) + (jnp.log10(3.0) - jnp.log10(1.0)) * logrs
+    logrs1 = jnp.log10(0.03) + (jnp.log10(30.0) - jnp.log10(0.03)) * logrs
 
     x1 = jax.scipy.special.ndtri(0.5 + x0 / 2.0) * 150.0
     z1 = jax.scipy.special.ndtri(z0) * 150.0
@@ -147,9 +147,9 @@ def prior_transform_scale_free_real(p):
         [
             logM1,
             logRs1,
-            q1,
-            theta_q1,
-            phi_q1,
+            dirx1,
+            diry1,
+            dirz1,
             log_mfrac1,
             logrs1,
             x1,
