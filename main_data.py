@@ -26,6 +26,7 @@ PATH_DATA_DEFAULT = Path('/data/dc824-2/SGA_Streams')
 PATH_OUT_DEFAULT = Path('/data/dc824-2/SGA_Streams_Kinematics')
 DEFAULT_STREAMS = ['UGC01424_factor3.0_pixscale0.6']
 LIKELIHOOD_MODES = ('track', 'track_los')
+MASS_LOSS_MODES = ('linear_to_zero', 'constant')
 LEGACY_LABELS = (
     'logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs',
     'x0', 'z0', 'vx0', 'vy0', 'vz0', 'time', 'sig',
@@ -57,10 +58,11 @@ def nice_name(name):
     return name.split("_factor")[0]
 
 
-def fit_results_path(path_out, name, parameterization, mode, ndim, n_particles, n_min, var_ratio, nlive, v_host=None, v_err_host=None):
+def fit_results_path(path_out, name, parameterization, mode, ndim, n_particles, n_min, var_ratio, nlive, mass_loss_mode='linear_to_zero', v_host=None, v_err_host=None):
         tag = (
             f'{parameterization}_{mode}_ndim{ndim}_Nparticles{n_particles}'
             f'_Nmin{n_min}_VarRatio{var_ratio}_nlive{nlive}'
+            f'_massloss-{mass_loss_mode}'
             f'_vhost{v_host}_vhosterr{v_err_host}'
         )
         output_dir = Path(path_out) / name / tag
@@ -160,7 +162,9 @@ def parse_args():
     parser.add_argument('--path-out', type=Path, default=PATH_OUT_DEFAULT)
     parser.add_argument('--nlive', type=int, default=2000)
     parser.add_argument('--n-min', type=int, default=3)
+    parser.add_argument('--var-ratio-override', type=float, default=None, help="Override the per-stream 'Var ratio' value from STRRINGS.csv.")
     parser.add_argument('--var-ratio-v', type=float, default=9.0)
+    parser.add_argument('--mass-loss', choices=MASS_LOSS_MODES, default='linear_to_zero')
     parser.add_argument('--overwrite', action='store_true')
     return parser.parse_args()
 
@@ -230,8 +234,8 @@ def save_q_posterior(output_dir, q_samps):
     plt.close()
 
 
-def save_best_fit_image(output_dir, path_data, name, dict_data, best_params, n_particles, stream_fn):
-    theta_stream, r_stream, xv_stream = stream_fn(best_params, n_particles)
+def save_best_fit_image(output_dir, path_data, name, dict_data, best_params, n_particles, stream_fn, mass_loss_mode='linear_to_zero'):
+    theta_stream, r_stream, xv_stream = stream_fn(best_params, n_particles, mass_loss_mode=mass_loss_mode)
     r_bin, _, _ = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
     xv_stream = np.asarray(xv_stream)
     r_bin = np.asarray(r_bin)
@@ -355,7 +359,12 @@ def run_stream(name, args, strings_by_name, catalogue_by_name):
     dict_data['bin_width'] = np.diff(dict_data['theta']).min()
 
     cfg = strings_by_name.get(name, {})
-    var_ratio_i = float(cfg.get('Var ratio', np.nan))
+    var_ratio_source = 'STRRINGS.csv'
+    if args.var_ratio_override is not None:
+        var_ratio_i = float(args.var_ratio_override)
+        var_ratio_source = 'cli_override'
+    else:
+        var_ratio_i = float(cfg.get('Var ratio', np.nan))
     if not np.isfinite(var_ratio_i) or var_ratio_i <= 0:
         print(f"Skipping {name}: missing/invalid Var ratio in STRRINGS.csv")
         return
@@ -400,6 +409,7 @@ def run_stream(name, args, strings_by_name, catalogue_by_name):
             args.n_min,
             var_ratio_i,
             args.nlive,
+            mass_loss_mode=args.mass_loss,
             v_host=v_host,
             v_err_host=v_err_host,
         )
@@ -419,7 +429,9 @@ def run_stream(name, args, strings_by_name, catalogue_by_name):
                 'n_particles': int(n_particles_i),
                 'n_min': int(args.n_min),
                 'var_ratio': float(var_ratio_i),
+                'var_ratio_source': var_ratio_source,
                 'var_ratio_v': float(args.var_ratio_v),
+                'mass_loss_mode': args.mass_loss,
                 'v_host': None if not np.isfinite(v_host) else float(v_host),
                 'v_err_host': None if not np.isfinite(v_err_host) else float(v_err_host),
             }
@@ -437,6 +449,7 @@ def run_stream(name, args, strings_by_name, catalogue_by_name):
                 var_ratio=var_ratio_i,
                 var_ratio_v=args.var_ratio_v,
                 nlive=args.nlive,
+                mass_loss_mode=args.mass_loss,
             )
             dict_results['labels'] = fit_spec['labels']
             dict_results['parameterization'] = args.parameterization
@@ -456,6 +469,7 @@ def run_stream(name, args, strings_by_name, catalogue_by_name):
             best_params,
             n_particles_i,
             fit_spec['stream_fn'],
+            mass_loss_mode=args.mass_loss,
         )
         results_by_mode[mode] = dict_results
 

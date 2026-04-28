@@ -8,6 +8,14 @@ import numpy as np
 
 EPSILON = 1e-6
 
+
+def resolve_final_satellite_logmass(initial_logm, mass_loss_mode='linear_to_zero'):
+    if mass_loss_mode == 'linear_to_zero':
+        return 0.0
+    if mass_loss_mode == 'constant':
+        return initial_logm
+    raise ValueError(f"Unknown mass_loss_mode={mass_loss_mode!r}")
+
 @jax.jit
 def get_q(dirx, diry, dirz, q_min=0.5, q_max=1.5):
     """
@@ -41,7 +49,7 @@ def halo_mass_from_stellar_mass(M_star,
             return 10**((jnp.log10(a)+jnp.log10(b))/2)
     return 10**((jnp.log10(a)+jnp.log10(b))/2)
 
-def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=True):
+def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=True, mass_loss_mode='linear_to_zero'):
     logM, Rs, dirx, diry, dirz, logm, rs, x0, z0, vx0, vy0, vz0, time = params[:13]
     q = get_q(dirx, diry, dirz)
 
@@ -61,12 +69,14 @@ def params_to_stream(params, n_particles=10000, n_steps=99, alpha=1., unroll=Tru
     xv_f = jnp.array([x0, 0.0, z0,  # Position in kpc
                     vx0, vy0, vz0])   # Velocity in kpc/Gyr
 
-    _, _, xv_stream, xhi_stream = StreaMAX.generate_stream(xv_f, 
-                                                            type_host, params_host, 
-                                                            type_sat, params_sat, 
+    m_f_sat = resolve_final_satellite_logmass(logm, mass_loss_mode)
+    _, _, xv_stream, xhi_stream = StreaMAX.generate_stream(xv_f,
+                                                            type_host, params_host,
+                                                            type_sat, params_sat,
                                                             time, alpha, n_steps,
-                                                            n_particles, 
-                                                            unroll)
+                                                            n_particles,
+                                                            unroll,
+                                                            m_f_sat=m_f_sat)
     _, _, theta_stream, r_stream, _ = StreaMAX.get_stream_ordered(xv_stream[:, 0], xv_stream[:, 1], xhi_stream)
 
     return theta_stream, r_stream, xv_stream
@@ -160,7 +170,7 @@ def scale_free_params_to_physical(params):
     }
 
 
-def params_to_stream_scale_free(params, n_particles=10000, n_steps=99, alpha=1., unroll=True):
+def params_to_stream_scale_free(params, n_particles=10000, n_steps=99, alpha=1., unroll=True, mass_loss_mode='linear_to_zero'):
     phys = scale_free_params_to_physical(params)
 
     type_host = 'NFW'
@@ -191,6 +201,7 @@ def params_to_stream_scale_free(params, n_particles=10000, n_steps=99, alpha=1.,
         [phys['x0'], 0.0, phys['z0'], phys['vx0'], phys['vy0'], phys['vz0']]
     )
 
+    m_f_sat = resolve_final_satellite_logmass(phys['logm'], mass_loss_mode)
     _, _, xv_stream, xhi_stream = StreaMAX.generate_stream(
         xv_f,
         type_host,
@@ -202,6 +213,7 @@ def params_to_stream_scale_free(params, n_particles=10000, n_steps=99, alpha=1.,
         n_steps,
         n_particles,
         unroll,
+        m_f_sat=m_f_sat,
     )
     _, _, theta_stream, r_stream, _ = StreaMAX.get_stream_ordered(
         xv_stream[:, 0], xv_stream[:, 1], xhi_stream

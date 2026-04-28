@@ -10,8 +10,8 @@ from utils import params_to_stream, params_to_stream_scale_free
 BAD_VAL = -1e15
 
 
-def _legacy_track_loglike(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0):
-    theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles)
+def _legacy_track_loglike(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, mass_loss_mode='linear_to_zero'):
+    theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles, mass_loss_mode=mass_loss_mode)
     r_bin, sig_bin, count_bin = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
 
     n_bad = jnp.sum(count_bin < n_min)
@@ -30,13 +30,13 @@ def _legacy_track_loglike(params, dict_data, n_particles=20000, n_min=3, var_rat
     return logl, theta_stream, xv_stream
 
 
-def logl_track(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0):
-    logl, _, _ = _legacy_track_loglike(params, dict_data, n_particles, n_min, var_ratio_thresh)
+def logl_track(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0, mass_loss_mode='linear_to_zero'):
+    logl, _, _ = _legacy_track_loglike(params, dict_data, n_particles, n_min, var_ratio_thresh, mass_loss_mode)
     return logl
 
-def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0):
+def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0, mass_loss_mode='linear_to_zero'):
     logl, theta_stream, xv_stream = _legacy_track_loglike(
-        params, dict_data, n_particles, n_min, var_ratio_thresh
+        params, dict_data, n_particles, n_min, var_ratio_thresh, mass_loss_mode
     )
     if logl <= BAD_VAL / 1e4:
         return logl
@@ -52,8 +52,8 @@ def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, va
     logl += -.5 * ((dict_data['vz'] - vz_mean)**2 / dict_data['vz_err']**2)
     return logl
 
-def logl_v(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0):
-    theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles)
+def logl_v(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0, mass_loss_mode='linear_to_zero'):
+    theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles, mass_loss_mode=mass_loss_mode)
     r_bin, sig_bin, count_bin = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
 
     n_bad = jnp.sum(count_bin < n_min)
@@ -97,8 +97,8 @@ def logl_v(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, 
     return logl
 
 
-def _scale_free_track_loglike(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0):
-    theta_stream, r_stream, xv_stream = params_to_stream_scale_free(params, n_particles)
+def _scale_free_track_loglike(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, mass_loss_mode='linear_to_zero'):
+    theta_stream, r_stream, xv_stream = params_to_stream_scale_free(params, n_particles, mass_loss_mode=mass_loss_mode)
     r_bin, sig_bin, count_bin = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
 
     n_bad = jnp.sum(count_bin < n_min)
@@ -117,14 +117,14 @@ def _scale_free_track_loglike(params, dict_data, n_particles=20000, n_min=3, var
     return logl, theta_stream, xv_stream
 
 
-def logl_scale_free_track(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0):
-    logl, _, _ = _scale_free_track_loglike(params, dict_data, n_particles, n_min, var_ratio_thresh)
+def logl_scale_free_track(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0, mass_loss_mode='linear_to_zero'):
+    logl, _, _ = _scale_free_track_loglike(params, dict_data, n_particles, n_min, var_ratio_thresh, mass_loss_mode)
     return jnp.nan_to_num(logl, nan=BAD_VAL, neginf=BAD_VAL, posinf=BAD_VAL)
 
 
-def logl_scale_free_track_los(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0):
+def logl_scale_free_track_los(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0, mass_loss_mode='linear_to_zero'):
     logl, theta_stream, xv_stream = _scale_free_track_loglike(
-        params, dict_data, n_particles, n_min, var_ratio_thresh
+        params, dict_data, n_particles, n_min, var_ratio_thresh, mass_loss_mode
     )
     if logl <= BAD_VAL / 1e4:
         return logl
