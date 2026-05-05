@@ -209,10 +209,36 @@ def extract_q_samples(parameterization, samples):
     return np.asarray(samples[:, 2], dtype=float)
 
 
-def save_corner_plot(output_dir, dict_results, labels, M_halo_new, M_halo_old):
+def compute_vz_posterior_kms(samps, dict_data, n_particles, stream_fn, mass_loss_mode='linear_to_zero', n_subset=1000):
+    n = len(samps)
+    if n > n_subset:
+        idx = np.linspace(0, n - 1, n_subset).astype(int)
+        samps_thin = samps[idx]
+    else:
+        samps_thin = samps
+    vz_min = dict_data['vz_theta'] - dict_data['vz_window']/2
+    vz_max = dict_data['vz_theta'] + dict_data['vz_window']/2
+    vz_means = np.empty(len(samps_thin))
+    for i, s in enumerate(samps_thin):
+        theta_stream, _, xv_stream = stream_fn(np.asarray(s), n_particles, mass_loss_mode=mass_loss_mode)
+        mask_v = (theta_stream >= vz_min) & (theta_stream <= vz_max)
+        cv = float(jnp.sum(mask_v))
+        if cv > 0:
+            vz_means[i] = float(jnp.sum(xv_stream[:, 5] * mask_v)) / cv
+        else:
+            vz_means[i] = np.nan
+    vz_means_kms = vz_means / KM_S_TO_KPC_GYR
+    finite = np.isfinite(vz_means_kms)
+    return samps_thin[finite], vz_means_kms[finite]
+
+
+def save_corner_plot(output_dir, samps, labels, M_halo_new, M_halo_old, vz_post=None, vz_obs=None):
+    if vz_post is not None:
+        samps = np.column_stack([samps, vz_post])
+        labels = list(labels) + ['vz [km/s]']
     ndim = len(labels)
     figure = corner.corner(
-        dict_results['samps'],
+        samps,
         labels=labels,
         color='blue',
         quantiles=[0.16, 0.5, 0.84],
@@ -231,6 +257,13 @@ def save_corner_plot(output_dir, dict_results, labels, M_halo_new, M_halo_old):
         for i in range(1, ndim):
             ax_2d = figure.axes[i * ndim]
             ax_2d.axvline(M_halo_old, color='green', linestyle='--', lw=1, alpha=0.5)
+    if vz_post is not None and vz_obs is not None and np.isfinite(vz_obs):
+        last = ndim - 1
+        ax_diag = figure.axes[last * ndim + last]
+        ax_diag.axvline(vz_obs, color='red', linestyle='--', lw=2)
+        for j in range(last):
+            ax_2d = figure.axes[last * ndim + j]
+            ax_2d.axhline(vz_obs, color='red', linestyle='--', lw=1, alpha=0.5)
     figure.savefig(output_dir / 'corner_plot.pdf')
     plt.close(figure)
 
@@ -494,7 +527,18 @@ def run_stream(name, args, strings_by_name, catalogue_by_name):
             with open(results_path, 'wb') as f:
                 pickle.dump(dict_results, f)
 
-        save_corner_plot(output_dir, dict_results, fit_spec['labels'], M_halo_new, M_halo_old)
+        if mode in LOS_REQUIRED_MODES:
+            samps_corner, vz_post = compute_vz_posterior_kms(
+                dict_results['samps'], dict_data, n_particles_i, fit_spec['stream_fn'],
+                mass_loss_mode=args.mass_loss,
+            )
+            vz_obs_kms = float(dict_data['vz']) / KM_S_TO_KPC_GYR
+            save_corner_plot(
+                output_dir, samps_corner, fit_spec['labels'], M_halo_new, M_halo_old,
+                vz_post=vz_post, vz_obs=vz_obs_kms,
+            )
+        else:
+            save_corner_plot(output_dir, dict_results['samps'], fit_spec['labels'], M_halo_new, M_halo_old)
         q_samps = extract_q_samples(args.parameterization, dict_results['samps'])
         save_q_posterior(output_dir, q_samps)
         best_params = dict_results['samps'][np.argmax(dict_results['logl'])]
