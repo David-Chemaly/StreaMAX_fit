@@ -65,11 +65,13 @@ def logl_los_only(params, dict_data, n_particles=20000, n_min=3, var_ratio_thres
         if var_model / var_data > 1 / var_ratio_thresh:
             logl = BAD_VAL / 1e3
         else:
+            var = var_data + params[13]**2
+            logl = -.5 * ((r_bin_v - dict_data['r_v'])**2 / var + jnp.log(2 * jnp.pi * var))
+
             theta_half = dict_data['vz_window']/2
             mask_v = (theta_stream >= dict_data['vz_theta'] - theta_half) & (theta_stream <= dict_data['vz_theta'] + theta_half)
             vz_mean = jnp.sum(xv_stream[:, 5] * mask_v) / jnp.sum(mask_v)
-            vz_var = dict_data['vz_err']**2
-            logl = -.5 * ((dict_data['vz'] - vz_mean)**2 / vz_var + jnp.log(2 * jnp.pi * vz_var))
+            logl += -.5 * ((dict_data['vz'] - vz_mean)**2 / dict_data['vz_err']**2)
 
     return logl
 
@@ -181,10 +183,12 @@ def logl_scale_free_los_only(params, dict_data, n_particles=20000, n_min=3, var_
         if var_model / var_data > 1 / var_ratio_thresh:
             logl = BAD_VAL / 1e3
         else:
+            var = var_data + params[13]**2
+            logl = -.5 * ((r_bin_v - dict_data['r_v'])**2 / var + jnp.log(2 * jnp.pi * var))
+
             theta_half = dict_data['vz_window']/2
             mask_v = (theta_stream >= dict_data['vz_theta'] - theta_half) & (theta_stream <= dict_data['vz_theta'] + theta_half)
             vz_mean = jnp.sum(xv_stream[:, 5] * mask_v) / jnp.sum(mask_v)
-            vz_var = dict_data['vz_err']**2
-            logl = -.5 * ((dict_data['vz'] - vz_mean)**2 / vz_var + jnp.log(2 * jnp.pi * vz_var))
+            logl += -.5 * ((dict_data['vz'] - vz_mean)**2 / dict_data['vz_err']**2)
 
     return jnp.nan_to_num(logl, nan=BAD_VAL, neginf=BAD_VAL, posinf=BAD_VAL)
