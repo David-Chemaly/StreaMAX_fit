@@ -26,6 +26,8 @@ PATH_DATA_DEFAULT = Path('/data/dc824-2/SGA_Streams')
 PATH_OUT_DEFAULT = Path('/data/dc824-2/SGA_Streams_Kinematics')
 DEFAULT_STREAMS = ['UGC01424_factor3.0_pixscale0.6']
 LIKELIHOOD_MODES = ('track', 'track_los')
+ALL_MODES = ('track', 'track_los', 'los_only')
+LOS_REQUIRED_MODES = ('track_los', 'los_only')
 MASS_LOSS_MODES = ('linear_to_zero', 'constant')
 LEGACY_LABELS = (
     'logM', 'Rs', 'dirx', 'diry', 'dirz', 'logm', 'rs',
@@ -157,7 +159,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Fit real streams with legacy or scale-free parameterizations.")
     parser.add_argument('--names', nargs='+', default=DEFAULT_STREAMS, help="Stream names to fit, or 'all' for every name in names.txt.")
     parser.add_argument('--parameterization', choices=['legacy', 'scale_free'], default='legacy')
-    parser.add_argument('--mode', choices=['track', 'track_los', 'both'], default='track_los')
+    parser.add_argument('--mode', choices=['track', 'track_los', 'los_only', 'both', 'all'], default='track_los')
     parser.add_argument('--path-data', type=Path, default=PATH_DATA_DEFAULT)
     parser.add_argument('--path-out', type=Path, default=PATH_OUT_DEFAULT)
     parser.add_argument('--nlive', type=int, default=2000)
@@ -171,18 +173,30 @@ def parse_args():
 
 def get_fit_spec(parameterization, mode):
     if parameterization == 'legacy':
+        if mode == 'track':
+            logl_fn = logl_track
+        elif mode == 'track_los':
+            logl_fn = logl
+        else:
+            logl_fn = logl_los_only
         return {
             'ndim': len(LEGACY_LABELS),
             'labels': list(LEGACY_LABELS),
             'prior_fn': prior_transform,
-            'logl_fn': logl_track if mode == 'track' else logl,
+            'logl_fn': logl_fn,
             'stream_fn': params_to_stream,
         }
+    if mode == 'track':
+        logl_fn = logl_scale_free_track
+    elif mode == 'track_los':
+        logl_fn = logl_scale_free_track_los
+    else:
+        logl_fn = logl_scale_free_los_only
     return {
         'ndim': len(SCALE_FREE_LABELS),
         'labels': list(SCALE_FREE_LABELS),
         'prior_fn': prior_transform_scale_free_real,
-        'logl_fn': logl_scale_free_track if mode == 'track' else logl_scale_free_track_los,
+        'logl_fn': logl_fn,
         'stream_fn': params_to_stream_scale_free,
     }
 
@@ -338,6 +352,8 @@ def attach_los_data(dict_data, cfg):
     dict_data['vz_err'] = vz_err * KM_S_TO_KPC_GYR
     dict_data['vz_theta'] = 0.0
     dict_data['vz_window'] = dict_data['bin_width']
+    i_vz = int(np.argmin(np.abs(np.asarray(dict_data['theta']) - dict_data['vz_theta'])))
+    dict_data['r_err_v'] = float(dict_data['r_err'][i_vz])
     return True, v_host, v_err_host
 
 
@@ -376,11 +392,16 @@ def run_stream(name, args, strings_by_name, catalogue_by_name):
     n_particles_i = int(n_particles_i)
 
     has_los, v_host, v_err_host = attach_los_data(dict_data, cfg)
-    requested_modes = list(LIKELIHOOD_MODES) if args.mode == 'both' else [args.mode]
+    if args.mode == 'both':
+        requested_modes = list(LIKELIHOOD_MODES)
+    elif args.mode == 'all':
+        requested_modes = list(ALL_MODES)
+    else:
+        requested_modes = [args.mode]
     modes = []
     for mode in requested_modes:
-        if mode == 'track_los' and not has_los:
-            print(f"Skipping {name} mode=track_los: missing/invalid numeric v or v_err in STRRINGS.csv")
+        if mode in LOS_REQUIRED_MODES and not has_los:
+            print(f"Skipping {name} mode={mode}: missing/invalid numeric v or v_err in STRRINGS.csv")
             continue
         modes.append(mode)
     if not modes:

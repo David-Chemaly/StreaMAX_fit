@@ -52,6 +52,28 @@ def logl(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, va
     logl += -.5 * ((dict_data['vz'] - vz_mean)**2 / dict_data['vz_err']**2)
     return logl
 
+def logl_los_only(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0, mass_loss_mode='linear_to_zero'):
+    theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles, mass_loss_mode=mass_loss_mode)
+
+    r_bin_v, sig_bin_v, count_bin_v = StreaMAX.get_track_2D(theta_stream, r_stream, dict_data['vz_theta'], dict_data['vz_window'])
+
+    if count_bin_v < n_min:
+        logl = BAD_VAL
+    else:
+        var_data = dict_data['r_err_v']**2
+        var_model = sig_bin_v**2 / count_bin_v
+        if var_model / var_data > 1 / var_ratio_thresh:
+            logl = BAD_VAL / 1e3
+        else:
+            theta_half = dict_data['vz_window']/2
+            mask_v = (theta_stream >= dict_data['vz_theta'] - theta_half) & (theta_stream <= dict_data['vz_theta'] + theta_half)
+            vz_mean = jnp.sum(xv_stream[:, 5] * mask_v) / jnp.sum(mask_v)
+            vz_var = dict_data['vz_err']**2
+            logl = -.5 * ((dict_data['vz'] - vz_mean)**2 / vz_var + jnp.log(2 * jnp.pi * vz_var))
+
+    return logl
+
+
 def logl_v(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0, mass_loss_mode='linear_to_zero'):
     theta_stream, r_stream, xv_stream = params_to_stream(params, n_particles, mass_loss_mode=mass_loss_mode)
     r_bin, sig_bin, count_bin = jax.vmap(StreaMAX.get_track_2D, in_axes=(None, None, 0, None))(theta_stream, r_stream, dict_data['theta'], dict_data['bin_width'])
@@ -143,4 +165,26 @@ def logl_scale_free_track_los(params, dict_data, n_particles=20000, n_min=3, var
     vz_mean = vz_sum / count_v
     vz_var = dict_data['vz_err']**2
     logl += -.5 * ((dict_data['vz'] - vz_mean)**2 / vz_var + jnp.log(2 * jnp.pi * vz_var))
+    return jnp.nan_to_num(logl, nan=BAD_VAL, neginf=BAD_VAL, posinf=BAD_VAL)
+
+
+def logl_scale_free_los_only(params, dict_data, n_particles=20000, n_min=3, var_ratio_thresh=9.0, var_ratio_thresh_v=9.0, mass_loss_mode='linear_to_zero'):
+    theta_stream, r_stream, xv_stream = params_to_stream_scale_free(params, n_particles, mass_loss_mode=mass_loss_mode)
+
+    r_bin_v, sig_bin_v, count_bin_v = StreaMAX.get_track_2D(theta_stream, r_stream, dict_data['vz_theta'], dict_data['vz_window'])
+
+    if count_bin_v < n_min:
+        logl = BAD_VAL
+    else:
+        var_data = dict_data['r_err_v']**2
+        var_model = sig_bin_v**2 / count_bin_v
+        if var_model / var_data > 1 / var_ratio_thresh:
+            logl = BAD_VAL / 1e3
+        else:
+            theta_half = dict_data['vz_window']/2
+            mask_v = (theta_stream >= dict_data['vz_theta'] - theta_half) & (theta_stream <= dict_data['vz_theta'] + theta_half)
+            vz_mean = jnp.sum(xv_stream[:, 5] * mask_v) / jnp.sum(mask_v)
+            vz_var = dict_data['vz_err']**2
+            logl = -.5 * ((dict_data['vz'] - vz_mean)**2 / vz_var + jnp.log(2 * jnp.pi * vz_var))
+
     return jnp.nan_to_num(logl, nan=BAD_VAL, neginf=BAD_VAL, posinf=BAD_VAL)
