@@ -168,6 +168,7 @@ def parse_args():
     parser.add_argument('--var-ratio-v', type=float, default=9.0)
     parser.add_argument('--mass-loss', choices=MASS_LOSS_MODES, default='linear_to_zero')
     parser.add_argument('--overwrite', action='store_true')
+    parser.add_argument('--skip-existing', action='store_true', help="Atomically claim the output dir; if it already exists, skip this stream/mode (useful for distributing fits across machines).")
     return parser.parse_args()
 
 
@@ -434,7 +435,14 @@ def run_stream(name, args, strings_by_name, catalogue_by_name):
             v_host=v_host,
             v_err_host=v_err_host,
         )
-        output_dir.mkdir(parents=True, exist_ok=True)
+        if args.skip_existing:
+            try:
+                output_dir.mkdir(parents=True, exist_ok=False)
+            except FileExistsError:
+                print(f"Skipping {name} [{args.parameterization}/{mode}]: output dir already exists at {output_dir}")
+                continue
+        else:
+            output_dir.mkdir(parents=True, exist_ok=True)
 
         if results_path.exists() and not args.overwrite:
             print(f"Skipping fit for {name} [{args.parameterization}/{mode}]: existing output at {output_dir}")
